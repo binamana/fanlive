@@ -1,0 +1,1711 @@
+
+import 'package:flutter/material.dart';
+import 'dart:async';
+import 'models/broadcast_record.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await loadFanState();
+  await loadBroadcastRecords();
+  await loadFanMessages();
+  await loadFanAffection();
+  await loadCharacter();
+  runApp(const FanLiveApp());
+}
+
+List<BroadcastRecord> globalBroadcastRecords = [];
+
+int globalFanCount = 124;
+int globalLevel = 1;
+
+String? globalStageName;
+String? globalFandomName;
+String? globalStyle;
+List<String> globalFanMessages = [];
+
+Map<String, String> fanProfiles = {
+  '하루': '감성적이고 걱정이 많은 장기팬',
+  '별밤': '현실적인 조언을 잘하는 팬',
+  '민트': '장난꾸러기이며 하트를 많이 보내는 팬',
+};
+
+Map<String, int> fanAffection = {
+  '하루': 0,
+  '별밤': 0,
+  '민트': 0,
+};
+
+Future<void> saveFanState() async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setInt('fanCount', globalFanCount);
+  await prefs.setInt('level', globalLevel);
+}
+
+Future<void> loadFanState() async {
+  final prefs = await SharedPreferences.getInstance();
+  globalFanCount = prefs.getInt('fanCount') ?? 124;
+  globalLevel = prefs.getInt('level') ?? 1;
+}
+Future<void> saveBroadcastRecords() async {
+  final prefs = await SharedPreferences.getInstance();
+
+  final recordsJson = globalBroadcastRecords
+      .map((record) => jsonEncode(record.toJson()))
+      .toList();
+
+  await prefs.setStringList('broadcastRecords', recordsJson);
+}
+Future<void> saveFanMessages() async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setStringList('fanMessages', globalFanMessages);
+}
+
+Future<void> loadFanMessages() async {
+  final prefs = await SharedPreferences.getInstance();
+  globalFanMessages = prefs.getStringList('fanMessages') ?? [];
+}
+Future<void> saveFanAffection() async {
+  final prefs = await SharedPreferences.getInstance();
+
+  await prefs.setInt('affection_haru', fanAffection['하루'] ?? 0);
+  await prefs.setInt('affection_byeolbam', fanAffection['별밤'] ?? 0);
+  await prefs.setInt('affection_mint', fanAffection['민트'] ?? 0);
+}
+
+Future<void> loadFanAffection() async {
+  final prefs = await SharedPreferences.getInstance();
+
+  fanAffection['하루'] = prefs.getInt('affection_haru') ?? 0;
+  fanAffection['별밤'] = prefs.getInt('affection_byeolbam') ?? 0;
+  fanAffection['민트'] = prefs.getInt('affection_mint') ?? 0;
+}
+
+Future<void> loadBroadcastRecords() async {
+  final prefs = await SharedPreferences.getInstance();
+
+  final recordsJson = prefs.getStringList('broadcastRecords') ?? [];
+
+  globalBroadcastRecords = recordsJson
+      .map((recordString) {
+        final json = jsonDecode(recordString);
+        return BroadcastRecord.fromJson(json);
+      })
+      .toList();
+}
+Future<void> saveCharacter() async {
+  final prefs = await SharedPreferences.getInstance();
+
+  if (globalStageName != null) {
+    await prefs.setString('stageName', globalStageName!);
+  }
+
+  if (globalFandomName != null) {
+    await prefs.setString('fandomName', globalFandomName!);
+  }
+
+  if (globalStyle != null) {
+    await prefs.setString('style', globalStyle!);
+  }
+}
+
+Future<void> loadCharacter() async {
+  final prefs = await SharedPreferences.getInstance();
+
+  globalStageName = prefs.getString('stageName');
+  globalFandomName = prefs.getString('fandomName');
+  globalStyle = prefs.getString('style');
+}
+
+bool hasCharacter() {
+  return globalStageName != null &&
+      globalFandomName != null &&
+      globalStyle != null;
+}
+
+class FanLiveApp extends StatelessWidget {
+  const FanLiveApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'FANLIVE',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData.dark(),
+      home: hasCharacter()
+    ? HomeScreen(
+        stageName: globalStageName!,
+        fandomName: globalFandomName!,
+        style: globalStyle!,
+      )
+    : const CharacterSetupScreen(),
+    );
+  }
+}
+
+class CharacterSetupScreen extends StatefulWidget {
+  const CharacterSetupScreen({super.key});
+
+  @override
+  State<CharacterSetupScreen> createState() => _CharacterSetupScreenState();
+}
+
+class _CharacterSetupScreenState extends State<CharacterSetupScreen> {
+  final stageNameController = TextEditingController();
+  final fandomNameController = TextEditingController();
+  String selectedStyle = '감성';
+
+  final styles = ['감성', '아이돌', '배우', '스트리머', '힙한', '몽환'];
+
+  @override
+  void dispose() {
+    stageNameController.dispose();
+    fandomNameController.dispose();
+    super.dispose();
+  }
+
+  void createCharacter() {
+    final stageName = stageNameController.text.trim();
+    final fandomName = fandomNameController.text.trim();
+
+    if (stageName.isEmpty || fandomName.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('활동명과 팬덤명을 입력해줘.')),
+      );
+      return;
+    }
+globalStageName = stageName;
+globalFandomName = fandomName;
+globalStyle = selectedStyle;
+saveCharacter();
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => HomeScreen(
+          stageName: stageName,
+          fandomName: fandomName,
+          style: selectedStyle,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FanLiveBackground(
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '캐릭터 만들기',
+                style: TextStyle(fontSize: 34, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                '당신의 가상 방송인 계정을 만들어보세요.',
+                style: TextStyle(color: Colors.white70, fontSize: 16),
+              ),
+              const SizedBox(height: 36),
+              FanInput(
+                controller: stageNameController,
+                label: '활동명',
+                hint: '예: LUNA',
+              ),
+              const SizedBox(height: 18),
+              FanInput(
+                controller: fandomNameController,
+                label: '팬덤명',
+                hint: '예: MOONIES',
+              ),
+              const SizedBox(height: 28),
+              const Text(
+                '방송 스타일',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: styles.map((style) {
+                  final selected = selectedStyle == style;
+                  return ChoiceChip(
+                    label: Text(style),
+                    selected: selected,
+                    selectedColor: const Color(0xFFFF4FB8),
+                    backgroundColor: Colors.white.withOpacity(0.08),
+                    labelStyle: TextStyle(
+                      color: selected ? Colors.white : Colors.white70,
+                      fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                    ),
+                    onSelected: (_) {
+                      setState(() {
+                        selectedStyle = style;
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+              const Spacer(),
+              SizedBox(
+                width: double.infinity,
+                height: 58,
+                child: ElevatedButton(
+                  style: fanButtonStyle(),
+                  onPressed: createCharacter,
+                  child: const Text(
+                    '캐릭터 생성하기',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class HomeScreen extends StatelessWidget {
+  final String stageName;
+  final String fandomName;
+  final String style;
+
+  const HomeScreen({
+    super.key,
+    required this.stageName,
+    required this.fandomName,
+    required this.style,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return FanLiveBackground(
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Spacer(),
+              const Text(
+                'FANLIVE',
+                style: TextStyle(
+                  fontSize: 42,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 2,
+                ),
+              ),
+              const SizedBox(height: 28),
+              GlassCard(
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 34,
+                      backgroundColor: const Color(0xFFFF4FB8),
+                      child: Text(
+                        stageName[0].toUpperCase(),
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 18),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          stageName,
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          '$fandomName · $style',
+                          style: const TextStyle(color: Colors.white70),
+                        ),
+                        const SizedBox(height: 8),
+Text(
+  '팬 ${globalFanCount}명 · Lv.$globalLevel',
+  style: const TextStyle(color: Colors.white54),
+),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              GlassCard(
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text(
+        '팬덤 성장',
+        style: TextStyle(color: Colors.white54),
+      ),
+      const SizedBox(height: 10),
+      LinearProgressIndicator(
+        value: (globalFanCount % 300) / 300,
+        backgroundColor: Colors.white12,
+        color: const Color(0xFFFF4FB8),
+      ),
+      const SizedBox(height: 10),
+      Text(
+        '다음 레벨까지 ${300 - (globalFanCount % 300)} 팬',
+      ),
+    ],
+  ),
+),
+const SizedBox(height: 20),
+              GlassCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('오늘의 팬 메시지', style: TextStyle(color: Colors.white54)),
+                    SizedBox(height: 10),
+Text(
+  globalFanMessages.isNotEmpty
+      ? '“${globalFanMessages.first}”'
+      : '“오늘도 라방 켜줄 거죠?”',
+  style: const TextStyle(
+    fontSize: 20,
+    fontWeight: FontWeight.w600,
+  ),
+),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 28),
+              SizedBox(
+  width: double.infinity,
+  height: 58,
+  child: ElevatedButton(
+    style: fanButtonStyle(),
+    onPressed: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ThemeSelectScreen(
+            stageName: stageName,
+            fandomName: fandomName,
+            style: style,
+          ),
+        ),
+      );
+    },
+    child: const Text(
+      '방송 시작하기',
+      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+    ),
+  ),
+),
+
+const SizedBox(height: 12),
+
+SizedBox(
+  width: double.infinity,
+  height: 52,
+  child: ElevatedButton(
+    style: ElevatedButton.styleFrom(
+      backgroundColor: Colors.white.withOpacity(0.12),
+      foregroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+      ),
+    ),
+    onPressed: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const RecordsListScreen(),
+        ),
+      );
+    },
+    child: const Text('방송 기록 보기'),
+  ),
+),
+
+const SizedBox(height: 12),
+
+SizedBox(
+  width: double.infinity,
+  height: 52,
+  child: ElevatedButton(
+    style: ElevatedButton.styleFrom(
+      backgroundColor: Colors.white.withOpacity(0.12),
+      foregroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+      ),
+    ),
+    onPressed: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const AchievementsScreen(),
+        ),
+      );
+    },
+    child: const Text('업적 / 칭호 보기'),
+  ),
+),
+const SizedBox(height: 12),
+
+SizedBox(
+  width: double.infinity,
+  height: 52,
+  child: ElevatedButton(
+    style: ElevatedButton.styleFrom(
+      backgroundColor: Colors.white.withOpacity(0.12),
+      foregroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+      ),
+    ),
+    onPressed: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const FanMailboxScreen(),
+        ),
+      );
+    },
+    child: Text(
+      '💌 팬 우편함 (${globalFanMessages.length})',
+    ),
+  ),
+),
+              const Spacer(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class FanInput extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+  final String hint;
+
+  const FanInput({
+    super.key,
+    required this.controller,
+    required this.label,
+    required this.hint,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      style: const TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        labelStyle: const TextStyle(color: Colors.white70),
+        hintStyle: const TextStyle(color: Colors.white30),
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.08),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
+        ),
+      ),
+    );
+  }
+}
+
+class FanLiveBackground extends StatelessWidget {
+  final Widget child;
+
+  const FanLiveBackground({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFF120018),
+              Color(0xFF2B0B3F),
+              Color(0xFF151022),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: child,
+      ),
+    );
+  }
+}
+
+class GlassCard extends StatelessWidget {
+  final Widget child;
+
+  const GlassCard({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.15)),
+      ),
+      child: child,
+    );
+  }
+}
+
+ButtonStyle fanButtonStyle() {
+  return ElevatedButton.styleFrom(
+    backgroundColor: const Color(0xFFFF4FB8),
+    foregroundColor: Colors.white,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(18),
+    ),
+  );
+}
+class ThemeSelectScreen extends StatelessWidget {
+  final String stageName;
+  final String fandomName;
+  final String style;
+
+  const ThemeSelectScreen({
+    super.key,
+    required this.stageName,
+    required this.fandomName,
+    required this.style,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final themes = [
+      {'id': 'first_live', 'title': '첫 방송', 'emoji': '✨', 'desc': '처음 팬들을 만나는 설렘'},
+      {'id': 'night_talk', 'title': '새벽 감성 방송', 'emoji': '🌙', 'desc': '조용하고 따뜻한 분위기'},
+      {'id': 'comeback', 'title': '컴백 직전 방송', 'emoji': '🎤', 'desc': '팬들이 스포를 기다리는 방송'},
+      {'id': 'fan_chat', 'title': '팬 수다 방송', 'emoji': '💬', 'desc': '팬들과 편하게 대화하기'},
+    ];
+
+    return FanLiveBackground(
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '오늘 어떤 라방을 할까요?',
+                style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                '방송 테마에 따라 팬들의 반응이 달라져요.',
+                style: TextStyle(color: Colors.white70),
+              ),
+              const SizedBox(height: 28),
+              Expanded(
+                child: ListView.separated(
+                  itemCount: themes.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 14),
+                  itemBuilder: (context, index) {
+                    final theme = themes[index];
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => LiveRoomScreen(
+                              stageName: stageName,
+                              fandomName: fandomName,
+                              themeTitle: theme['title']!,
+                            ),
+                          ),
+                        );
+                      },
+                      child: GlassCard(
+                        child: Row(
+                          children: [
+                            Text(
+                              theme['emoji']!,
+                              style: const TextStyle(fontSize: 34),
+                            ),
+                            const SizedBox(width: 18),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    theme['title']!,
+                                    style: const TextStyle(
+                                      fontSize: 21,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    theme['desc']!,
+                                    style: const TextStyle(color: Colors.white60),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class LiveRoomScreen extends StatefulWidget {
+  final String stageName;
+  final String fandomName;
+  final String themeTitle;
+
+  const LiveRoomScreen({
+    super.key,
+    required this.stageName,
+    required this.fandomName,
+    required this.themeTitle,
+  });
+
+  @override
+  State<LiveRoomScreen> createState() => _LiveRoomScreenState();
+}
+
+class _LiveRoomScreenState extends State<LiveRoomScreen> {
+  int viewers = 124;
+  int hearts = 0;
+  int floatingHeartKey = 0;
+
+  final speechController = TextEditingController();
+  late Timer autoChatTimer;
+
+  final comments = <String>[
+    '하루: 드디어 왔다!',
+    '별밤: 오늘 분위기 좋다',
+    '민트: LIVE 켜줘서 고마워요',
+    '모찌: 오늘 분위기 좋다',
+  ];
+  final userSpeechHistory = <String>[];
+
+  @override
+  void initState() {
+    super.initState();
+    startAutoChat();
+  }
+
+  @override
+  void dispose() {
+    autoChatTimer.cancel();
+    speechController.dispose();
+    super.dispose();
+  }
+
+void addHeart() {
+  setState(() {
+    hearts += 1;
+    floatingHeartKey += 1;
+
+    if (hearts % 5 == 0) viewers += 1;
+    comments.add('하트요정: 하트 눌렀어요 💖');
+  });
+}
+
+  void sendSpeech() {
+    final text = speechController.text.trim();
+    if (text.isEmpty) return;
+
+    setState(() {
+      comments.add('나: $text');
+        userSpeechHistory.add(text);
+
+      if (text.contains('안녕') || text.contains('하이')) {
+        comments.addAll([
+          '하루: 왔다 왔다!',
+          '별밤: 오늘도 반가워요 💖',
+          '민트: ${widget.fandomName} 출석!',
+        ]);
+        viewers += 8;
+        hearts += 20;
+      } else if (text.contains('힘들') ||
+          text.contains('피곤') ||
+          text.contains('속상')) {
+        comments.addAll([
+          '새벽이: 무슨 일 있었어요ㅠ',
+          '모찌: 괜찮아요? 무리하지 말아요',
+          '하루: 우리 여기 있어요',
+          '별밤: 오늘 와줘서 고마워요',
+        ]);
+        viewers += 14;
+        hearts += 55;
+      } else if (text.contains('고마워') || text.contains('감사')) {
+        comments.addAll([
+          '하트요정: 우리가 더 고마워요',
+          '민트: 이래서 못 떠남 진짜',
+          '별밤: 평생 응원할게요',
+        ]);
+        viewers += 12;
+        hearts += 70;
+      } else {
+        comments.addAll([
+          '첫방문자: 오늘 분위기 좋다',
+          '민트: 방금 말투 귀여움ㅋㅋ',
+          '별밤: ${widget.stageName} 라방 은근 중독됨',
+        ]);
+        viewers += 6;
+        hearts += 18;
+      }
+
+      speechController.clear();
+    });
+  }
+
+  void startAutoChat() {
+    autoChatTimer = Timer.periodic(
+      const Duration(seconds: 4),
+      (_) {
+        final autoMessages = [
+          '하루: 오늘 텐션 좋다',
+          '별밤: 이 시간 라방 너무 좋음',
+          '민트: 채팅 분위기 따뜻하다',
+          '모찌: ${widget.stageName} 오늘 말투 좋네',
+          '루나틱: ${widget.fandomName} 출석 완료',
+          '새벽이: 조명 분위기 미쳤다',
+          '하트요정: 하트 누르고 갑니다 💖',
+        ];
+
+        setState(() {
+          comments.add(
+            autoMessages[DateTime.now().millisecond % autoMessages.length],
+          );
+
+          if (viewers < 999) {
+            viewers += DateTime.now().second % 3;
+          }
+
+          hearts += DateTime.now().second % 5;
+        });
+      },
+    );
+  }
+
+void endLive() {
+  String bestMoment = '첫 인사를 나눈 순간';
+  String summary = '팬들과 편안하게 소통한 라방이었어요.';
+  String earnedTitle = '첫 데뷔';
+
+  for (final speech in userSpeechHistory) {
+    if (speech.contains('힘들') ||
+        speech.contains('피곤') ||
+        speech.contains('속상')) {
+      bestMoment = speech;
+      summary = '오늘은 솔직한 감정 이야기를 나누며 팬들과 따뜻한 시간을 보냈어요.';
+      earnedTitle = '감성 방송러';
+      break;
+    }
+
+    if (speech.contains('노래') ||
+        speech.contains('곡') ||
+        speech.contains('작업') ||
+        speech.contains('앨범')) {
+      bestMoment = speech;
+      summary = '오늘은 음악과 작업 이야기를 중심으로 팬들과 소통했어요.';
+      earnedTitle = '작업 토크 장인';
+    }
+
+    if (speech.contains('고마워') || speech.contains('감사')) {
+      bestMoment = speech;
+      summary = '팬들에게 고마운 마음을 전하며 분위기가 따뜻해졌어요.';
+      earnedTitle = '팬서비스 요정';
+    }
+  }
+
+  if (userSpeechHistory.isNotEmpty && bestMoment == '첫 인사를 나눈 순간') {
+    bestMoment = userSpeechHistory.last;
+  }
+  if (hearts >= 100) {
+  earnedTitle = '하트 폭격';
+  }
+
+if (viewers >= 300) {
+  earnedTitle = '라이징 스타';
+}
+
+globalBroadcastRecords.insert(
+  0,
+  BroadcastRecord(
+    themeTitle: widget.themeTitle,
+    viewers: viewers,
+    hearts: hearts,
+    bestMoment: bestMoment,
+    summary: summary,
+    earnedTitle: earnedTitle,
+    createdAt: DateTime.now(),
+  ),
+);
+
+saveBroadcastRecords();
+if (summary.contains('감정') || earnedTitle == '감성 방송러') {
+  globalFanMessages.insert(
+    0,
+    '하루 (${fanProfiles['하루']}): 오늘은 조금 걱정됐어요. 그래도 와줘서 고마워요 💖',
+  );
+
+  globalFanMessages.insert(
+    0,
+    '별밤 (${fanProfiles['별밤']}): 무리하지 말고 쉬는 시간도 꼭 챙겨요.',
+  );
+
+  globalFanMessages.insert(
+    0,
+    '민트 (${fanProfiles['민트']}): 일단 하트 잔뜩 보내고 갈게요 💖💖💖',
+  );
+} else if (summary.contains('음악') || earnedTitle == '작업 토크 장인') {
+  globalFanMessages.insert(
+    0,
+    '하루 (${fanProfiles['하루']}): 오늘 작업 이야기 너무 좋았어요. 다음에 또 들려줘요!',
+  );
+
+  globalFanMessages.insert(
+    0,
+    '별밤 (${fanProfiles['별밤']}): 새 곡 이야기 들으니까 진짜 기대돼요.',
+  );
+
+  globalFanMessages.insert(
+    0,
+    '민트 (${fanProfiles['민트']}): 스포 더 주세요... 아니 조금만요 😆',
+  );
+} else if (summary.contains('고마운') || earnedTitle == '팬서비스 요정') {
+  globalFanMessages.insert(
+    0,
+    '하루 (${fanProfiles['하루']}): 오늘 고맙다고 해준 거 진짜 감동이었어요.',
+  );
+
+  globalFanMessages.insert(
+    0,
+    '별밤 (${fanProfiles['별밤']}): 우리가 더 고마워요. 오래 봐요.',
+  );
+
+  globalFanMessages.insert(
+    0,
+    '민트 (${fanProfiles['민트']}): 팬서비스 미쳤다... 오늘 못 잊음 😆',
+  );
+} else {
+  globalFanMessages.insert(
+    0,
+    '하루 (${fanProfiles['하루']}): 오늘 방송 와줘서 고마워요 💖',
+  );
+
+  globalFanMessages.insert(
+    0,
+    '별밤 (${fanProfiles['별밤']}): 다음 방송도 기다릴게요!',
+  );
+
+  globalFanMessages.insert(
+    0,
+    '민트 (${fanProfiles['민트']}): 오늘 이야기 재밌었어요 😆',
+  );
+}
+
+saveFanMessages();
+
+fanAffection['하루'] = (fanAffection['하루'] ?? 0) + 3;
+fanAffection['별밤'] = (fanAffection['별밤'] ?? 0) + 2;
+fanAffection['민트'] = (fanAffection['민트'] ?? 0) + 4;
+
+saveFanAffection();
+
+globalFanCount += (viewers ~/ 8);
+
+if (globalFanCount >= 300) {
+  globalLevel = 2;
+}
+
+if (globalFanCount >= 800) {
+  globalLevel = 3;
+}
+
+if (globalFanCount >= 1500) {
+  globalLevel = 4;
+}
+
+if (globalFanCount >= 3000) {
+  globalLevel = 5;
+}
+saveFanState();
+
+  Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(
+      builder: (_) => LiveSummaryScreen(
+        themeTitle: widget.themeTitle,
+        viewers: viewers,
+        hearts: hearts,
+        bestMoment: bestMoment,
+        summary: summary,
+        earnedTitle: earnedTitle,
+      ),
+    ),
+  );
+}
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF09000F),
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Color(0xFF24002F),
+                      Color(0xFF09000F),
+                      Color(0xFF341257),
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
+                child: const Center(
+                  child: Text(
+                    '카메라 프리뷰 영역',
+                    style: TextStyle(color: Colors.white38, fontSize: 22),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 16,
+              left: 16,
+              right: 16,
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: const Color(0xFFFF4FB8),
+                    child: Text(widget.stageName[0].toUpperCase()),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: GlassMini(
+                      child: Text(
+                        '${widget.stageName} · ${widget.fandomName}\n👥 $viewers명',
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.redAccent,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: const Text(
+                      'LIVE',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              left: 16,
+              right: 86,
+              bottom: 92,
+              child: SizedBox(
+                height: 210,
+                child: ListView.builder(
+                  reverse: true,
+                  itemCount: comments.length,
+                  itemBuilder: (context, index) {
+                    final comment = comments[comments.length - 1 - index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 9,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.35),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(comment),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+            Positioned(
+              right: 18,
+              bottom: 92,
+              child: Column(
+                children: [
+                  IconButton(
+                    onPressed: addHeart,
+                    iconSize: 42,
+                    icon: const Icon(Icons.favorite, color: Color(0xFFFF4FB8)),
+                  ),
+                  Text('$hearts'),
+                ],
+              ),
+            ),
+Positioned(
+  right: 24,
+  bottom: 150,
+  child: FloatingHeart(key: ValueKey(floatingHeartKey)),
+),
+Positioned(
+  left: 16,
+  right: 16,
+  bottom: 22,
+  child: Column(
+    children: [
+      Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: speechController,
+              style: const TextStyle(color: Colors.white),
+              onSubmitted: (_) => sendSpeech(),
+              decoration: InputDecoration(
+                hintText: '지금 말하기 테스트...',
+                hintStyle: const TextStyle(color: Colors.white38),
+                filled: true,
+                fillColor: Colors.black.withOpacity(0.32),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(18),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF4FB8),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: sendSpeech,
+            child: const Text('전송'),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white.withOpacity(0.15),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: endLive,
+            child: const Text('종료'),
+          ),
+        ],
+      ),
+    ],
+  ),
+),
+          ],
+        ),
+      ),
+    );
+  }
+}
+class LiveSummaryScreen extends StatelessWidget {
+  final String themeTitle;
+  final int viewers;
+  final int hearts;
+  final String bestMoment;
+final String summary;
+final String earnedTitle;
+
+const LiveSummaryScreen({
+  super.key,
+  required this.themeTitle,
+  required this.viewers,
+  required this.hearts,
+  required this.bestMoment,
+  required this.summary,
+  required this.earnedTitle,
+});
+
+  @override
+  Widget build(BuildContext context) {
+    return FanLiveBackground(
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '오늘의 라방 종료',
+                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 28),
+GlassCard(
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text('테마: $themeTitle', style: const TextStyle(fontSize: 20)),
+      const SizedBox(height: 18),
+      Text('최고 시청자: $viewers명'),
+      Text('총 하트: $hearts개'),
+Text('신규 팬: +${viewers ~/ 8}명'),
+
+      const SizedBox(height: 18),
+      const Text(
+        '오늘의 순간',
+        style: TextStyle(color: Colors.white54),
+      ),
+      const SizedBox(height: 6),
+      Text(
+        '“$bestMoment”',
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+
+      const SizedBox(height: 18),
+      const Text(
+        '방송 요약',
+        style: TextStyle(color: Colors.white54),
+      ),
+      const SizedBox(height: 6),
+      Text(summary),
+
+      const SizedBox(height: 18),
+Text(
+  '🏆 획득 칭호: $earnedTitle',
+  style: const TextStyle(
+    fontWeight: FontWeight.bold,
+    fontSize: 18,
+  ),
+),
+    ],
+  ),
+),
+              const Spacer(),
+              SizedBox(
+  width: double.infinity,
+  height: 52,
+  child: ElevatedButton(
+    style: ElevatedButton.styleFrom(
+      backgroundColor: Colors.white.withOpacity(0.12),
+      foregroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+      ),
+    ),
+    onPressed: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => RecordsScreen(
+            themeTitle: themeTitle,
+            viewers: viewers,
+            hearts: hearts,
+            bestMoment: bestMoment,
+            summary: summary,
+          ),
+        ),
+      );
+    },
+    child: const Text('방송 기록 보기'),
+  ),
+),
+const SizedBox(height: 12),
+
+              SizedBox(
+                width: double.infinity,
+                height: 58,
+                child: ElevatedButton(
+                  style: fanButtonStyle(),
+                  onPressed: () {
+                    Navigator.popUntil(context, (route) => route.isFirst);
+                  },
+                  child: const Text('홈으로 돌아가기'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class GlassMini extends StatelessWidget {
+  final Widget child;
+
+  const GlassMini({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.28),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withOpacity(0.12)),
+      ),
+      child: child,
+    );
+  }
+}
+class FloatingHeart extends StatefulWidget {
+  const FloatingHeart({super.key});
+
+  @override
+  State<FloatingHeart> createState() => _FloatingHeartState();
+}
+
+class _FloatingHeartState extends State<FloatingHeart>
+    with SingleTickerProviderStateMixin {
+  late AnimationController controller;
+  late Animation<double> moveUp;
+  late Animation<double> fadeOut;
+  late Animation<double> scaleUp;
+
+  @override
+  void initState() {
+    super.initState();
+
+    controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+
+    moveUp = Tween<double>(begin: 0, end: -90).animate(
+      CurvedAnimation(parent: controller, curve: Curves.easeOut),
+    );
+
+    fadeOut = Tween<double>(begin: 1, end: 0).animate(
+      CurvedAnimation(parent: controller, curve: Curves.easeIn),
+    );
+
+    scaleUp = Tween<double>(begin: 0.7, end: 1.35).animate(
+      CurvedAnimation(parent: controller, curve: Curves.elasticOut),
+    );
+
+    controller.forward();
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, moveUp.value),
+          child: Opacity(
+            opacity: fadeOut.value,
+            child: Transform.scale(
+              scale: scaleUp.value,
+              child: const Text(
+                '💖',
+                style: TextStyle(fontSize: 42),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+class RecordsScreen extends StatelessWidget {
+  final String themeTitle;
+  final int viewers;
+  final int hearts;
+  final String bestMoment;
+  final String summary;
+
+  const RecordsScreen({
+    super.key,
+    required this.themeTitle,
+    required this.viewers,
+    required this.hearts,
+    required this.bestMoment,
+    required this.summary,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+
+    return FanLiveBackground(
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '방송 기록',
+                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                '내 캐릭터의 활동 기록이 쌓여요.',
+                style: TextStyle(color: Colors.white70),
+              ),
+              const SizedBox(height: 28),
+              GlassCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${now.year}.${now.month}.${now.day}',
+                      style: const TextStyle(color: Colors.white54),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      themeTitle,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text('최고 시청자: $viewers명'),
+                    Text('총 하트: $hearts개'),
+                    const Text('신규 팬: +24명'),
+                    const SizedBox(height: 16),
+                    const Text(
+                      '오늘의 순간',
+                      style: TextStyle(color: Colors.white54),
+                    ),
+                    const SizedBox(height: 6),
+                    Text('“$bestMoment”'),
+                    const SizedBox(height: 16),
+                    const Text(
+                      '요약',
+                      style: TextStyle(color: Colors.white54),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(summary),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  style: fanButtonStyle(),
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('돌아가기'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+class RecordsListScreen extends StatelessWidget {
+  const RecordsListScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return FanLiveBackground(
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '방송 기록',
+                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                '지금까지의 라방 기록이 여기에 쌓여요.',
+                style: TextStyle(color: Colors.white70),
+              ),
+              const SizedBox(height: 24),
+
+              Expanded(
+                child: globalBroadcastRecords.isEmpty
+                    ? const Center(
+                        child: Text(
+                          '아직 방송 기록이 없어요.\n첫 라방을 시작해보세요.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.white54),
+                        ),
+                      )
+                    : ListView.separated(
+                        itemCount: globalBroadcastRecords.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final record = globalBroadcastRecords[index];
+                          return GlassCard(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${record.createdAt.year}.${record.createdAt.month}.${record.createdAt.day}',
+                                  style: const TextStyle(color: Colors.white54),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  record.themeTitle,
+                                  style: const TextStyle(
+                                    fontSize: 21,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Text('최고 시청자: ${record.viewers}명'),
+                                Text('총 하트: ${record.hearts}개'),
+                                Text('획득 칭호: ${record.earnedTitle}'),
+                                const SizedBox(height: 12),
+                                Text(
+                                  record.summary,
+                                  style: const TextStyle(color: Colors.white70),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+              ),
+
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  style: fanButtonStyle(),
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('돌아가기'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+class AchievementsScreen extends StatelessWidget {
+  const AchievementsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final earnedTitles = globalBroadcastRecords
+        .map((record) => record.earnedTitle)
+        .toSet()
+        .toList();
+
+    final allTitles = [
+      '첫 데뷔',
+      '감성 방송러',
+      '작업 토크 장인',
+      '팬서비스 요정',
+      '하트 폭격',
+      '라이징 스타',
+    ];
+
+    return FanLiveBackground(
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '업적 / 칭호',
+                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                '라방을 하며 얻은 칭호들이 여기에 모여요.',
+                style: TextStyle(color: Colors.white70),
+              ),
+              const SizedBox(height: 24),
+              Expanded(
+                child: ListView.separated(
+                  itemCount: allTitles.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final title = allTitles[index];
+                    final unlocked = earnedTitles.contains(title);
+
+                    return Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: unlocked
+                            ? Colors.white.withOpacity(0.10)
+                            : Colors.white.withOpacity(0.04),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: unlocked
+                              ? const Color(0xFFFF4FB8).withOpacity(0.7)
+                              : Colors.white.withOpacity(0.08),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Text(
+                            unlocked ? '🏆' : '🔒',
+                            style: const TextStyle(fontSize: 30),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Text(
+                              title,
+                              style: TextStyle(
+                                fontSize: 19,
+                                fontWeight: FontWeight.bold,
+                                color: unlocked ? Colors.white : Colors.white38,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  style: fanButtonStyle(),
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('돌아가기'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+class FanMailboxScreen extends StatelessWidget {
+  const FanMailboxScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return FanLiveBackground(
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '💌 팬 우편함',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '도착한 팬 메시지 ${globalFanMessages.length}개',
+                style: const TextStyle(
+                  color: Colors.white70,
+                ),
+              ),
+              const SizedBox(height: 16),
+GlassCard(
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text(
+        '팬 호감도',
+        style: TextStyle(color: Colors.white54),
+      ),
+      const SizedBox(height: 10),
+      Text('하루 ❤️ ${fanAffection['하루'] ?? 0}'),
+      Text('별밤 ❤️ ${fanAffection['별밤'] ?? 0}'),
+      Text('민트 ❤️ ${fanAffection['민트'] ?? 0}'),
+    ],
+  ),
+),
+              const SizedBox(height: 24),
+
+              Expanded(
+                child: ListView.builder(
+                  itemCount: globalFanMessages.length,
+                  itemBuilder: (context, index) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: GlassCard(
+                        child: Text(
+                          globalFanMessages[index],
+                          style: const TextStyle(
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  style: fanButtonStyle(),
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Text('돌아가기'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
