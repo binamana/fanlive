@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../services/live_theme_service.dart';
 import '../widgets/fanlive_background.dart';
 import '../widgets/glass_card.dart';
 import 'live_room_screen.dart';
@@ -18,12 +19,7 @@ class ThemeSelectScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themes = [
-      {'id': 'first_live', 'title': '첫 방송', 'emoji': '✨', 'desc': '처음 팬들을 만나는 설렘'},
-      {'id': 'night_talk', 'title': '새벽 감성 방송', 'emoji': '🌙', 'desc': '조용하고 따뜻한 분위기'},
-      {'id': 'comeback', 'title': '컴백 직전 방송', 'emoji': '🎤', 'desc': '팬들이 스포를 기다리는 방송'},
-      {'id': 'fan_chat', 'title': '팬 수다 방송', 'emoji': '💬', 'desc': '팬들과 편하게 대화하기'},
-    ];
+    final themes = LiveThemeService.getThemes();
 
     return FanLiveBackground(
       child: SafeArea(
@@ -56,7 +52,7 @@ class ThemeSelectScreen extends StatelessWidget {
                             builder: (_) => LiveRoomScreen(
                               stageName: stageName,
                               fandomName: fandomName,
-                              themeTitle: theme['title']!,
+                              themeTitle: theme.title,
                             ),
                           ),
                         );
@@ -65,7 +61,7 @@ class ThemeSelectScreen extends StatelessWidget {
                         child: Row(
                           children: [
                             Text(
-                              theme['emoji']!,
+                              theme.emoji,
                               style: const TextStyle(fontSize: 34),
                             ),
                             const SizedBox(width: 18),
@@ -74,7 +70,7 @@ class ThemeSelectScreen extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    theme['title']!,
+                                    theme.title,
                                     style: const TextStyle(
                                       fontSize: 21,
                                       fontWeight: FontWeight.bold,
@@ -82,7 +78,7 @@ class ThemeSelectScreen extends StatelessWidget {
                                   ),
                                   const SizedBox(height: 6),
                                   Text(
-                                    theme['desc']!,
+                                    theme.description,
                                     style: const TextStyle(color: Colors.white60),
                                   ),
                                 ],
