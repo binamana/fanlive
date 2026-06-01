@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../main.dart' show RecordsScreen, fanButtonStyle;
+import '../main.dart' show fanButtonStyle;
 import '../widgets/fanlive_background.dart';
 import '../widgets/glass_card.dart';
+import 'records_screen.dart';
 
 class LiveSummaryScreen extends StatelessWidget {
   final String themeTitle;
