@@ -11,6 +11,7 @@ import '../app/fanlive_globals.dart'
         globalFanMessages,
         globalLevel;
 import '../models/broadcast_record.dart';
+import '../services/fan_reaction_engine.dart';
 import '../services/fanlive_storage.dart'
     show saveBroadcastRecords, saveFanAffection, saveFanMessages, saveFanState;
 import '../widgets/floating_heart.dart';
@@ -80,42 +81,15 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
       comments.add('나: $text');
       userSpeechHistory.add(text);
 
-      if (text.contains('안녕') || text.contains('하이')) {
-        comments.addAll([
-          '하루: 왔다 왔다!',
-          '별밤: 오늘도 반가워요 💖',
-          '민트: ${widget.fandomName} 출석!',
-        ]);
-        viewers += 8;
-        hearts += 20;
-      } else if (text.contains('힘들') ||
-          text.contains('피곤') ||
-          text.contains('속상')) {
-        comments.addAll([
-          '새벽이: 무슨 일 있었어요ㅠ',
-          '모찌: 괜찮아요? 무리하지 말아요',
-          '하루: 우리 여기 있어요',
-          '별밤: 오늘 와줘서 고마워요',
-        ]);
-        viewers += 14;
-        hearts += 55;
-      } else if (text.contains('고마워') || text.contains('감사')) {
-        comments.addAll([
-          '하트요정: 우리가 더 고마워요',
-          '민트: 이래서 못 떠남 진짜',
-          '별밤: 평생 응원할게요',
-        ]);
-        viewers += 12;
-        hearts += 70;
-      } else {
-        comments.addAll([
-          '첫방문자: 오늘 분위기 좋다',
-          '민트: 방금 말투 귀여움ㅋㅋ',
-          '별밤: ${widget.stageName} 라방 은근 중독됨',
-        ]);
-        viewers += 6;
-        hearts += 18;
-      }
+      final reaction = FanReactionEngine.reactToSpeech(
+        text: text,
+        stageName: widget.stageName,
+        fandomName: widget.fandomName,
+      );
+
+      comments.addAll(reaction.comments);
+      viewers += reaction.viewerDelta;
+      hearts += reaction.heartDelta;
 
       speechController.clear();
     });
