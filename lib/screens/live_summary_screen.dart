@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../app/fanlive_globals.dart'
+    show globalFandomName, globalStageName, globalStyle;
 import '../main.dart' show fanButtonStyle;
 import '../widgets/fanlive_background.dart';
 import '../widgets/glass_card.dart';
+import 'home_screen.dart';
 import 'records_screen.dart';
 
 class LiveSummaryScreen extends StatelessWidget {
@@ -120,7 +123,17 @@ class LiveSummaryScreen extends StatelessWidget {
                 child: ElevatedButton(
                   style: fanButtonStyle(),
                   onPressed: () {
-                    Navigator.popUntil(context, (route) => route.isFirst);
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => HomeScreen(
+                          stageName: globalStageName!,
+                          fandomName: globalFandomName!,
+                          style: globalStyle!,
+                        ),
+                      ),
+                      (route) => false,
+                    );
                   },
                   child: const Text('홈으로 돌아가기'),
                 ),

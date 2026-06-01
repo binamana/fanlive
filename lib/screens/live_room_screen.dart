@@ -13,6 +13,7 @@ import '../app/fanlive_globals.dart'
 import '../models/broadcast_record.dart';
 import '../services/broadcast_summary_service.dart';
 import '../services/fan_mail_service.dart';
+import '../services/fan_growth_service.dart';
 import '../services/fan_reaction_engine.dart';
 import '../services/fanlive_storage.dart'
     show saveBroadcastRecords, saveFanAffection, saveFanMessages, saveFanState;
@@ -159,29 +160,13 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
 
     saveFanMessages();
 
-    fanAffection['하루'] = (fanAffection['하루'] ?? 0) + 3;
-    fanAffection['별밤'] = (fanAffection['별밤'] ?? 0) + 2;
-    fanAffection['민트'] = (fanAffection['민트'] ?? 0) + 4;
+    FanGrowthService.applyAffectionGrowth(fanAffection);
 
     saveFanAffection();
 
-    globalFanCount += (viewers ~/ 8);
+    globalFanCount += FanGrowthService.calculateNewFans(viewers);
 
-    if (globalFanCount >= 300) {
-      globalLevel = 2;
-    }
-
-    if (globalFanCount >= 800) {
-      globalLevel = 3;
-    }
-
-    if (globalFanCount >= 1500) {
-      globalLevel = 4;
-    }
-
-    if (globalFanCount >= 3000) {
-      globalLevel = 5;
-    }
+    globalLevel = FanGrowthService.calculateLevel(globalFanCount);
     saveFanState();
 
     Navigator.pushReplacement(
