@@ -60,7 +60,7 @@ class RecordsScreen extends StatelessWidget {
                     const SizedBox(height: 14),
                     Text('최고 시청자: $viewers명'),
                     Text('총 하트: $hearts개'),
-                    const Text('신규 팬: +24명'),
+                    Text('신규 팬: +${viewers ~/ 8}명'),
                     const SizedBox(height: 16),
                     const Text(
                       '오늘의 순간',
