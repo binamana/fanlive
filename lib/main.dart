@@ -7,7 +7,9 @@ import 'screens/character_setup_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/live_summary_screen.dart';
 import 'widgets/fanlive_background.dart';
+import 'widgets/floating_heart.dart';
 import 'widgets/glass_card.dart';
+import 'widgets/glass_mini.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -613,88 +615,3 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
   }
 }
 
-class GlassMini extends StatelessWidget {
-  final Widget child;
-
-  const GlassMini({super.key, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.28),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withOpacity(0.12)),
-      ),
-      child: child,
-    );
-  }
-}
-
-class FloatingHeart extends StatefulWidget {
-  const FloatingHeart({super.key});
-
-  @override
-  State<FloatingHeart> createState() => _FloatingHeartState();
-}
-
-class _FloatingHeartState extends State<FloatingHeart>
-    with SingleTickerProviderStateMixin {
-  late AnimationController controller;
-  late Animation<double> moveUp;
-  late Animation<double> fadeOut;
-  late Animation<double> scaleUp;
-
-  @override
-  void initState() {
-    super.initState();
-
-    controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    );
-
-    moveUp = Tween<double>(
-      begin: 0,
-      end: -90,
-    ).animate(CurvedAnimation(parent: controller, curve: Curves.easeOut));
-
-    fadeOut = Tween<double>(
-      begin: 1,
-      end: 0,
-    ).animate(CurvedAnimation(parent: controller, curve: Curves.easeIn));
-
-    scaleUp = Tween<double>(
-      begin: 0.7,
-      end: 1.35,
-    ).animate(CurvedAnimation(parent: controller, curve: Curves.elasticOut));
-
-    controller.forward();
-  }
-
-  @override
-  void dispose() {
-    controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (context, child) {
-        return Transform.translate(
-          offset: Offset(0, moveUp.value),
-          child: Opacity(
-            opacity: fadeOut.value,
-            child: Transform.scale(
-              scale: scaleUp.value,
-              child: const Text('💖', style: TextStyle(fontSize: 42)),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
