@@ -5,8 +5,8 @@ import '../main.dart'
         fanButtonStyle,
         globalFandomName,
         globalStageName,
-        globalStyle,
-        saveCharacter;
+        globalStyle;
+import '../services/fanlive_storage.dart' show saveCharacter;
 import '../widgets/fan_input.dart';
 import '../widgets/fanlive_background.dart';
 import 'home_screen.dart';

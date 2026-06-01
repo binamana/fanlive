@@ -9,12 +9,10 @@ import '../main.dart'
         globalBroadcastRecords,
         globalFanCount,
         globalFanMessages,
-        globalLevel,
-        saveBroadcastRecords,
-        saveFanAffection,
-        saveFanMessages,
-        saveFanState;
+        globalLevel;
 import '../models/broadcast_record.dart';
+import '../services/fanlive_storage.dart'
+    show saveBroadcastRecords, saveFanAffection, saveFanMessages, saveFanState;
 import '../widgets/floating_heart.dart';
 import '../widgets/glass_mini.dart';
 import 'live_summary_screen.dart';
