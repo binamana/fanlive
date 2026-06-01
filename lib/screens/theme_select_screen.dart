@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../main.dart' show LiveRoomScreen;
 import '../widgets/fanlive_background.dart';
 import '../widgets/glass_card.dart';
+import 'live_room_screen.dart';
 
 class ThemeSelectScreen extends StatelessWidget {
   final String stageName;
