@@ -11,6 +11,7 @@ import '../app/fanlive_globals.dart'
         globalFanMessages,
         globalLevel;
 import '../models/broadcast_record.dart';
+import '../services/fan_mail_service.dart';
 import '../services/fan_reaction_engine.dart';
 import '../services/fanlive_storage.dart'
     show saveBroadcastRecords, saveFanAffection, saveFanMessages, saveFanState;
@@ -177,60 +178,14 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
     );
 
     saveBroadcastRecords();
-    if (summary.contains('감정') || earnedTitle == '감성 방송러') {
-      globalFanMessages.insert(
-        0,
-        '하루 (${fanProfiles['하루']}): 오늘은 조금 걱정됐어요. 그래도 와줘서 고마워요 💖',
-      );
+    final fanMailMessages = FanMailService.generateMessages(
+      summary: summary,
+      earnedTitle: earnedTitle,
+      fanProfiles: fanProfiles,
+    );
 
-      globalFanMessages.insert(
-        0,
-        '별밤 (${fanProfiles['별밤']}): 무리하지 말고 쉬는 시간도 꼭 챙겨요.',
-      );
-
-      globalFanMessages.insert(
-        0,
-        '민트 (${fanProfiles['민트']}): 일단 하트 잔뜩 보내고 갈게요 💖💖💖',
-      );
-    } else if (summary.contains('음악') || earnedTitle == '작업 토크 장인') {
-      globalFanMessages.insert(
-        0,
-        '하루 (${fanProfiles['하루']}): 오늘 작업 이야기 너무 좋았어요. 다음에 또 들려줘요!',
-      );
-
-      globalFanMessages.insert(
-        0,
-        '별밤 (${fanProfiles['별밤']}): 새 곡 이야기 들으니까 진짜 기대돼요.',
-      );
-
-      globalFanMessages.insert(
-        0,
-        '민트 (${fanProfiles['민트']}): 스포 더 주세요... 아니 조금만요 😆',
-      );
-    } else if (summary.contains('고마운') || earnedTitle == '팬서비스 요정') {
-      globalFanMessages.insert(
-        0,
-        '하루 (${fanProfiles['하루']}): 오늘 고맙다고 해준 거 진짜 감동이었어요.',
-      );
-
-      globalFanMessages.insert(
-        0,
-        '별밤 (${fanProfiles['별밤']}): 우리가 더 고마워요. 오래 봐요.',
-      );
-
-      globalFanMessages.insert(
-        0,
-        '민트 (${fanProfiles['민트']}): 팬서비스 미쳤다... 오늘 못 잊음 😆',
-      );
-    } else {
-      globalFanMessages.insert(
-        0,
-        '하루 (${fanProfiles['하루']}): 오늘 방송 와줘서 고마워요 💖',
-      );
-
-      globalFanMessages.insert(0, '별밤 (${fanProfiles['별밤']}): 다음 방송도 기다릴게요!');
-
-      globalFanMessages.insert(0, '민트 (${fanProfiles['민트']}): 오늘 이야기 재밌었어요 😆');
+    for (final message in fanMailMessages) {
+      globalFanMessages.insert(0, message);
     }
 
     saveFanMessages();
