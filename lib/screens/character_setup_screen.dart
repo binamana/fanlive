@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../main.dart'
-    show
-        fanButtonStyle,
-        globalFandomName,
-        globalStageName,
-        globalStyle;
+import '../app/fanlive_globals.dart'
+    show globalFandomName, globalStageName, globalStyle;
+import '../main.dart' show fanButtonStyle;
 import '../services/fanlive_storage.dart' show saveCharacter;
 import '../widgets/fan_input.dart';
 import '../widgets/fanlive_background.dart';

@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../main.dart' as app;
+import '../app/fanlive_globals.dart' as app;
 import '../models/broadcast_record.dart';
 
 Future<void> saveFanState() async {

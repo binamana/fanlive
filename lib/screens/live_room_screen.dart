@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../main.dart'
+import '../app/fanlive_globals.dart'
     show
         fanAffection,
         fanProfiles,

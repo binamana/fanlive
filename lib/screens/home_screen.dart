@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../main.dart'
-    show
-        fanButtonStyle,
-        globalFanCount,
-        globalFanMessages,
-        globalLevel;
+import '../app/fanlive_globals.dart'
+    show globalFanCount, globalFanMessages, globalLevel;
+import '../main.dart' show fanButtonStyle;
 import '../widgets/fanlive_background.dart';
 import '../widgets/glass_card.dart';
 import 'achievements_screen.dart';

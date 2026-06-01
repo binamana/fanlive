@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../main.dart' show fanAffection, fanButtonStyle, globalFanMessages;
+import '../app/fanlive_globals.dart' show fanAffection, globalFanMessages;
+import '../main.dart' show fanButtonStyle;
 import '../widgets/fanlive_background.dart';
 import '../widgets/glass_card.dart';
 

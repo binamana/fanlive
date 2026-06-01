@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../main.dart' show fanButtonStyle, globalBroadcastRecords;
+import '../app/fanlive_globals.dart' show globalBroadcastRecords;
+import '../main.dart' show fanButtonStyle;
 import '../widgets/fanlive_background.dart';
 
 class AchievementsScreen extends StatelessWidget {
