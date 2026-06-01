@@ -5,13 +5,13 @@ import '../main.dart'
         AchievementsScreen,
         FanMailboxScreen,
         RecordsListScreen,
-        ThemeSelectScreen,
         fanButtonStyle,
         globalFanCount,
         globalFanMessages,
         globalLevel;
 import '../widgets/fanlive_background.dart';
 import '../widgets/glass_card.dart';
+import 'theme_select_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final String stageName;
