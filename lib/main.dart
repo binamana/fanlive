@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'models/broadcast_record.dart';
@@ -9,7 +8,6 @@ import 'screens/home_screen.dart';
 import 'screens/live_summary_screen.dart';
 import 'widgets/fanlive_background.dart';
 import 'widgets/glass_card.dart';
-
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,11 +35,7 @@ Map<String, String> fanProfiles = {
   '민트': '장난꾸러기이며 하트를 많이 보내는 팬',
 };
 
-Map<String, int> fanAffection = {
-  '하루': 0,
-  '별밤': 0,
-  '민트': 0,
-};
+Map<String, int> fanAffection = {'하루': 0, '별밤': 0, '민트': 0};
 
 Future<void> saveFanState() async {
   final prefs = await SharedPreferences.getInstance();
@@ -54,6 +48,7 @@ Future<void> loadFanState() async {
   globalFanCount = prefs.getInt('fanCount') ?? 124;
   globalLevel = prefs.getInt('level') ?? 1;
 }
+
 Future<void> saveBroadcastRecords() async {
   final prefs = await SharedPreferences.getInstance();
 
@@ -63,6 +58,7 @@ Future<void> saveBroadcastRecords() async {
 
   await prefs.setStringList('broadcastRecords', recordsJson);
 }
+
 Future<void> saveFanMessages() async {
   final prefs = await SharedPreferences.getInstance();
   await prefs.setStringList('fanMessages', globalFanMessages);
@@ -72,6 +68,7 @@ Future<void> loadFanMessages() async {
   final prefs = await SharedPreferences.getInstance();
   globalFanMessages = prefs.getStringList('fanMessages') ?? [];
 }
+
 Future<void> saveFanAffection() async {
   final prefs = await SharedPreferences.getInstance();
 
@@ -93,13 +90,12 @@ Future<void> loadBroadcastRecords() async {
 
   final recordsJson = prefs.getStringList('broadcastRecords') ?? [];
 
-  globalBroadcastRecords = recordsJson
-      .map((recordString) {
-        final json = jsonDecode(recordString);
-        return BroadcastRecord.fromJson(json);
-      })
-      .toList();
+  globalBroadcastRecords = recordsJson.map((recordString) {
+    final json = jsonDecode(recordString);
+    return BroadcastRecord.fromJson(json);
+  }).toList();
 }
+
 Future<void> saveCharacter() async {
   final prefs = await SharedPreferences.getInstance();
 
@@ -140,12 +136,12 @@ class FanLiveApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark(),
       home: hasCharacter()
-    ? HomeScreen(
-        stageName: globalStageName!,
-        fandomName: globalFandomName!,
-        style: globalStyle!,
-      )
-    : const CharacterSetupScreen(),
+          ? HomeScreen(
+              stageName: globalStageName!,
+              fandomName: globalFandomName!,
+              style: globalStyle!,
+            )
+          : const CharacterSetupScreen(),
     );
   }
 }
@@ -154,11 +150,10 @@ ButtonStyle fanButtonStyle() {
   return ElevatedButton.styleFrom(
     backgroundColor: const Color(0xFFFF4FB8),
     foregroundColor: Colors.white,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(18),
-    ),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
   );
 }
+
 class LiveRoomScreen extends StatefulWidget {
   final String stageName;
   final String fandomName;
@@ -204,15 +199,15 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
     super.dispose();
   }
 
-void addHeart() {
-  setState(() {
-    hearts += 1;
-    floatingHeartKey += 1;
+  void addHeart() {
+    setState(() {
+      hearts += 1;
+      floatingHeartKey += 1;
 
-    if (hearts % 5 == 0) viewers += 1;
-    comments.add('하트요정: 하트 눌렀어요 💖');
-  });
-}
+      if (hearts % 5 == 0) viewers += 1;
+      comments.add('하트요정: 하트 눌렀어요 💖');
+    });
+  }
 
   void sendSpeech() {
     final text = speechController.text.trim();
@@ -220,7 +215,7 @@ void addHeart() {
 
     setState(() {
       comments.add('나: $text');
-        userSpeechHistory.add(text);
+      userSpeechHistory.add(text);
 
       if (text.contains('안녕') || text.contains('하이')) {
         comments.addAll([
@@ -264,193 +259,185 @@ void addHeart() {
   }
 
   void startAutoChat() {
-    autoChatTimer = Timer.periodic(
-      const Duration(seconds: 4),
-      (_) {
-        final autoMessages = [
-          '하루: 오늘 텐션 좋다',
-          '별밤: 이 시간 라방 너무 좋음',
-          '민트: 채팅 분위기 따뜻하다',
-          '모찌: ${widget.stageName} 오늘 말투 좋네',
-          '루나틱: ${widget.fandomName} 출석 완료',
-          '새벽이: 조명 분위기 미쳤다',
-          '하트요정: 하트 누르고 갑니다 💖',
-        ];
+    autoChatTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      final autoMessages = [
+        '하루: 오늘 텐션 좋다',
+        '별밤: 이 시간 라방 너무 좋음',
+        '민트: 채팅 분위기 따뜻하다',
+        '모찌: ${widget.stageName} 오늘 말투 좋네',
+        '루나틱: ${widget.fandomName} 출석 완료',
+        '새벽이: 조명 분위기 미쳤다',
+        '하트요정: 하트 누르고 갑니다 💖',
+      ];
 
-        setState(() {
-          comments.add(
-            autoMessages[DateTime.now().millisecond % autoMessages.length],
-          );
+      setState(() {
+        comments.add(
+          autoMessages[DateTime.now().millisecond % autoMessages.length],
+        );
 
-          if (viewers < 999) {
-            viewers += DateTime.now().second % 3;
-          }
+        if (viewers < 999) {
+          viewers += DateTime.now().second % 3;
+        }
 
-          hearts += DateTime.now().second % 5;
-        });
-      },
-    );
+        hearts += DateTime.now().second % 5;
+      });
+    });
   }
 
-void endLive() {
-  String bestMoment = '첫 인사를 나눈 순간';
-  String summary = '팬들과 편안하게 소통한 라방이었어요.';
-  String earnedTitle = '첫 데뷔';
+  void endLive() {
+    String bestMoment = '첫 인사를 나눈 순간';
+    String summary = '팬들과 편안하게 소통한 라방이었어요.';
+    String earnedTitle = '첫 데뷔';
 
-  for (final speech in userSpeechHistory) {
-    if (speech.contains('힘들') ||
-        speech.contains('피곤') ||
-        speech.contains('속상')) {
-      bestMoment = speech;
-      summary = '오늘은 솔직한 감정 이야기를 나누며 팬들과 따뜻한 시간을 보냈어요.';
-      earnedTitle = '감성 방송러';
-      break;
+    for (final speech in userSpeechHistory) {
+      if (speech.contains('힘들') ||
+          speech.contains('피곤') ||
+          speech.contains('속상')) {
+        bestMoment = speech;
+        summary = '오늘은 솔직한 감정 이야기를 나누며 팬들과 따뜻한 시간을 보냈어요.';
+        earnedTitle = '감성 방송러';
+        break;
+      }
+
+      if (speech.contains('노래') ||
+          speech.contains('곡') ||
+          speech.contains('작업') ||
+          speech.contains('앨범')) {
+        bestMoment = speech;
+        summary = '오늘은 음악과 작업 이야기를 중심으로 팬들과 소통했어요.';
+        earnedTitle = '작업 토크 장인';
+      }
+
+      if (speech.contains('고마워') || speech.contains('감사')) {
+        bestMoment = speech;
+        summary = '팬들에게 고마운 마음을 전하며 분위기가 따뜻해졌어요.';
+        earnedTitle = '팬서비스 요정';
+      }
     }
 
-    if (speech.contains('노래') ||
-        speech.contains('곡') ||
-        speech.contains('작업') ||
-        speech.contains('앨범')) {
-      bestMoment = speech;
-      summary = '오늘은 음악과 작업 이야기를 중심으로 팬들과 소통했어요.';
-      earnedTitle = '작업 토크 장인';
+    if (userSpeechHistory.isNotEmpty && bestMoment == '첫 인사를 나눈 순간') {
+      bestMoment = userSpeechHistory.last;
+    }
+    if (hearts >= 100) {
+      earnedTitle = '하트 폭격';
     }
 
-    if (speech.contains('고마워') || speech.contains('감사')) {
-      bestMoment = speech;
-      summary = '팬들에게 고마운 마음을 전하며 분위기가 따뜻해졌어요.';
-      earnedTitle = '팬서비스 요정';
+    if (viewers >= 300) {
+      earnedTitle = '라이징 스타';
     }
-  }
 
-  if (userSpeechHistory.isNotEmpty && bestMoment == '첫 인사를 나눈 순간') {
-    bestMoment = userSpeechHistory.last;
-  }
-  if (hearts >= 100) {
-  earnedTitle = '하트 폭격';
-  }
-
-if (viewers >= 300) {
-  earnedTitle = '라이징 스타';
-}
-
-globalBroadcastRecords.insert(
-  0,
-  BroadcastRecord(
-    themeTitle: widget.themeTitle,
-    viewers: viewers,
-    hearts: hearts,
-    bestMoment: bestMoment,
-    summary: summary,
-    earnedTitle: earnedTitle,
-    createdAt: DateTime.now(),
-  ),
-);
-
-saveBroadcastRecords();
-if (summary.contains('감정') || earnedTitle == '감성 방송러') {
-  globalFanMessages.insert(
-    0,
-    '하루 (${fanProfiles['하루']}): 오늘은 조금 걱정됐어요. 그래도 와줘서 고마워요 💖',
-  );
-
-  globalFanMessages.insert(
-    0,
-    '별밤 (${fanProfiles['별밤']}): 무리하지 말고 쉬는 시간도 꼭 챙겨요.',
-  );
-
-  globalFanMessages.insert(
-    0,
-    '민트 (${fanProfiles['민트']}): 일단 하트 잔뜩 보내고 갈게요 💖💖💖',
-  );
-} else if (summary.contains('음악') || earnedTitle == '작업 토크 장인') {
-  globalFanMessages.insert(
-    0,
-    '하루 (${fanProfiles['하루']}): 오늘 작업 이야기 너무 좋았어요. 다음에 또 들려줘요!',
-  );
-
-  globalFanMessages.insert(
-    0,
-    '별밤 (${fanProfiles['별밤']}): 새 곡 이야기 들으니까 진짜 기대돼요.',
-  );
-
-  globalFanMessages.insert(
-    0,
-    '민트 (${fanProfiles['민트']}): 스포 더 주세요... 아니 조금만요 😆',
-  );
-} else if (summary.contains('고마운') || earnedTitle == '팬서비스 요정') {
-  globalFanMessages.insert(
-    0,
-    '하루 (${fanProfiles['하루']}): 오늘 고맙다고 해준 거 진짜 감동이었어요.',
-  );
-
-  globalFanMessages.insert(
-    0,
-    '별밤 (${fanProfiles['별밤']}): 우리가 더 고마워요. 오래 봐요.',
-  );
-
-  globalFanMessages.insert(
-    0,
-    '민트 (${fanProfiles['민트']}): 팬서비스 미쳤다... 오늘 못 잊음 😆',
-  );
-} else {
-  globalFanMessages.insert(
-    0,
-    '하루 (${fanProfiles['하루']}): 오늘 방송 와줘서 고마워요 💖',
-  );
-
-  globalFanMessages.insert(
-    0,
-    '별밤 (${fanProfiles['별밤']}): 다음 방송도 기다릴게요!',
-  );
-
-  globalFanMessages.insert(
-    0,
-    '민트 (${fanProfiles['민트']}): 오늘 이야기 재밌었어요 😆',
-  );
-}
-
-saveFanMessages();
-
-fanAffection['하루'] = (fanAffection['하루'] ?? 0) + 3;
-fanAffection['별밤'] = (fanAffection['별밤'] ?? 0) + 2;
-fanAffection['민트'] = (fanAffection['민트'] ?? 0) + 4;
-
-saveFanAffection();
-
-globalFanCount += (viewers ~/ 8);
-
-if (globalFanCount >= 300) {
-  globalLevel = 2;
-}
-
-if (globalFanCount >= 800) {
-  globalLevel = 3;
-}
-
-if (globalFanCount >= 1500) {
-  globalLevel = 4;
-}
-
-if (globalFanCount >= 3000) {
-  globalLevel = 5;
-}
-saveFanState();
-
-  Navigator.pushReplacement(
-    context,
-    MaterialPageRoute(
-      builder: (_) => LiveSummaryScreen(
+    globalBroadcastRecords.insert(
+      0,
+      BroadcastRecord(
         themeTitle: widget.themeTitle,
         viewers: viewers,
         hearts: hearts,
         bestMoment: bestMoment,
         summary: summary,
         earnedTitle: earnedTitle,
+        createdAt: DateTime.now(),
       ),
-    ),
-  );
-}
+    );
+
+    saveBroadcastRecords();
+    if (summary.contains('감정') || earnedTitle == '감성 방송러') {
+      globalFanMessages.insert(
+        0,
+        '하루 (${fanProfiles['하루']}): 오늘은 조금 걱정됐어요. 그래도 와줘서 고마워요 💖',
+      );
+
+      globalFanMessages.insert(
+        0,
+        '별밤 (${fanProfiles['별밤']}): 무리하지 말고 쉬는 시간도 꼭 챙겨요.',
+      );
+
+      globalFanMessages.insert(
+        0,
+        '민트 (${fanProfiles['민트']}): 일단 하트 잔뜩 보내고 갈게요 💖💖💖',
+      );
+    } else if (summary.contains('음악') || earnedTitle == '작업 토크 장인') {
+      globalFanMessages.insert(
+        0,
+        '하루 (${fanProfiles['하루']}): 오늘 작업 이야기 너무 좋았어요. 다음에 또 들려줘요!',
+      );
+
+      globalFanMessages.insert(
+        0,
+        '별밤 (${fanProfiles['별밤']}): 새 곡 이야기 들으니까 진짜 기대돼요.',
+      );
+
+      globalFanMessages.insert(
+        0,
+        '민트 (${fanProfiles['민트']}): 스포 더 주세요... 아니 조금만요 😆',
+      );
+    } else if (summary.contains('고마운') || earnedTitle == '팬서비스 요정') {
+      globalFanMessages.insert(
+        0,
+        '하루 (${fanProfiles['하루']}): 오늘 고맙다고 해준 거 진짜 감동이었어요.',
+      );
+
+      globalFanMessages.insert(
+        0,
+        '별밤 (${fanProfiles['별밤']}): 우리가 더 고마워요. 오래 봐요.',
+      );
+
+      globalFanMessages.insert(
+        0,
+        '민트 (${fanProfiles['민트']}): 팬서비스 미쳤다... 오늘 못 잊음 😆',
+      );
+    } else {
+      globalFanMessages.insert(
+        0,
+        '하루 (${fanProfiles['하루']}): 오늘 방송 와줘서 고마워요 💖',
+      );
+
+      globalFanMessages.insert(0, '별밤 (${fanProfiles['별밤']}): 다음 방송도 기다릴게요!');
+
+      globalFanMessages.insert(0, '민트 (${fanProfiles['민트']}): 오늘 이야기 재밌었어요 😆');
+    }
+
+    saveFanMessages();
+
+    fanAffection['하루'] = (fanAffection['하루'] ?? 0) + 3;
+    fanAffection['별밤'] = (fanAffection['별밤'] ?? 0) + 2;
+    fanAffection['민트'] = (fanAffection['민트'] ?? 0) + 4;
+
+    saveFanAffection();
+
+    globalFanCount += (viewers ~/ 8);
+
+    if (globalFanCount >= 300) {
+      globalLevel = 2;
+    }
+
+    if (globalFanCount >= 800) {
+      globalLevel = 3;
+    }
+
+    if (globalFanCount >= 1500) {
+      globalLevel = 4;
+    }
+
+    if (globalFanCount >= 3000) {
+      globalLevel = 5;
+    }
+    saveFanState();
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => LiveSummaryScreen(
+          themeTitle: widget.themeTitle,
+          viewers: viewers,
+          hearts: hearts,
+          bestMoment: bestMoment,
+          summary: summary,
+          earnedTitle: earnedTitle,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -500,7 +487,10 @@ saveFanState();
                   ),
                   const SizedBox(width: 10),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.redAccent,
                       borderRadius: BorderRadius.circular(999),
@@ -559,69 +549,70 @@ saveFanState();
                 ],
               ),
             ),
-Positioned(
-  right: 24,
-  bottom: 150,
-  child: FloatingHeart(key: ValueKey(floatingHeartKey)),
-),
-Positioned(
-  left: 16,
-  right: 16,
-  bottom: 22,
-  child: Column(
-    children: [
-      Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: speechController,
-              style: const TextStyle(color: Colors.white),
-              onSubmitted: (_) => sendSpeech(),
-              decoration: InputDecoration(
-                hintText: '지금 말하기 테스트...',
-                hintStyle: const TextStyle(color: Colors.white38),
-                filled: true,
-                fillColor: Colors.black.withOpacity(0.32),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(18),
-                  borderSide: BorderSide.none,
-                ),
+            Positioned(
+              right: 24,
+              bottom: 150,
+              child: FloatingHeart(key: ValueKey(floatingHeartKey)),
+            ),
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 22,
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: speechController,
+                          style: const TextStyle(color: Colors.white),
+                          onSubmitted: (_) => sendSpeech(),
+                          decoration: InputDecoration(
+                            hintText: '지금 말하기 테스트...',
+                            hintStyle: const TextStyle(color: Colors.white38),
+                            filled: true,
+                            fillColor: Colors.black.withOpacity(0.32),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(18),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFF4FB8),
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: sendSpeech,
+                        child: const Text('전송'),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white.withOpacity(0.15),
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: endLive,
+                        child: const Text('종료'),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFF4FB8),
-              foregroundColor: Colors.white,
-            ),
-            onPressed: sendSpeech,
-            child: const Text('전송'),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white.withOpacity(0.15),
-              foregroundColor: Colors.white,
-            ),
-            onPressed: endLive,
-            child: const Text('종료'),
-          ),
-        ],
-      ),
-    ],
-  ),
-),
           ],
         ),
       ),
     );
   }
 }
+
 class GlassMini extends StatelessWidget {
   final Widget child;
 
@@ -640,6 +631,7 @@ class GlassMini extends StatelessWidget {
     );
   }
 }
+
 class FloatingHeart extends StatefulWidget {
   const FloatingHeart({super.key});
 
@@ -663,17 +655,20 @@ class _FloatingHeartState extends State<FloatingHeart>
       duration: const Duration(milliseconds: 900),
     );
 
-    moveUp = Tween<double>(begin: 0, end: -90).animate(
-      CurvedAnimation(parent: controller, curve: Curves.easeOut),
-    );
+    moveUp = Tween<double>(
+      begin: 0,
+      end: -90,
+    ).animate(CurvedAnimation(parent: controller, curve: Curves.easeOut));
 
-    fadeOut = Tween<double>(begin: 1, end: 0).animate(
-      CurvedAnimation(parent: controller, curve: Curves.easeIn),
-    );
+    fadeOut = Tween<double>(
+      begin: 1,
+      end: 0,
+    ).animate(CurvedAnimation(parent: controller, curve: Curves.easeIn));
 
-    scaleUp = Tween<double>(begin: 0.7, end: 1.35).animate(
-      CurvedAnimation(parent: controller, curve: Curves.elasticOut),
-    );
+    scaleUp = Tween<double>(
+      begin: 0.7,
+      end: 1.35,
+    ).animate(CurvedAnimation(parent: controller, curve: Curves.elasticOut));
 
     controller.forward();
   }
@@ -695,95 +690,11 @@ class _FloatingHeartState extends State<FloatingHeart>
             opacity: fadeOut.value,
             child: Transform.scale(
               scale: scaleUp.value,
-              child: const Text(
-                '💖',
-                style: TextStyle(fontSize: 42),
-              ),
+              child: const Text('💖', style: TextStyle(fontSize: 42)),
             ),
           ),
         );
       },
-    );
-  }
-}
-class FanMailboxScreen extends StatelessWidget {
-  const FanMailboxScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return FanLiveBackground(
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                '💌 팬 우편함',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '도착한 팬 메시지 ${globalFanMessages.length}개',
-                style: const TextStyle(
-                  color: Colors.white70,
-                ),
-              ),
-              const SizedBox(height: 16),
-GlassCard(
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      const Text(
-        '팬 호감도',
-        style: TextStyle(color: Colors.white54),
-      ),
-      const SizedBox(height: 10),
-      Text('하루 ❤️ ${fanAffection['하루'] ?? 0}'),
-      Text('별밤 ❤️ ${fanAffection['별밤'] ?? 0}'),
-      Text('민트 ❤️ ${fanAffection['민트'] ?? 0}'),
-    ],
-  ),
-),
-              const SizedBox(height: 24),
-
-              Expanded(
-                child: ListView.builder(
-                  itemCount: globalFanMessages.length,
-                  itemBuilder: (context, index) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: GlassCard(
-                        child: Text(
-                          globalFanMessages[index],
-                          style: const TextStyle(
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  style: fanButtonStyle(),
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  child: const Text('돌아가기'),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

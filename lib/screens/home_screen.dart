@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../main.dart'
     show
-        FanMailboxScreen,
         fanButtonStyle,
         globalFanCount,
         globalFanMessages,
@@ -10,6 +9,7 @@ import '../main.dart'
 import '../widgets/fanlive_background.dart';
 import '../widgets/glass_card.dart';
 import 'achievements_screen.dart';
+import 'fan_mailbox_screen.dart';
 import 'records_list_screen.dart';
 import 'theme_select_screen.dart';
 
