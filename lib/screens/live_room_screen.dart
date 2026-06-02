@@ -17,6 +17,7 @@ import '../services/fan_growth_service.dart';
 import '../services/fan_reaction_engine.dart';
 import '../services/fanlive_storage.dart'
     show saveBroadcastRecords, saveFanAffection, saveFanMessages, saveFanState;
+import '../services/theme_comment_service.dart';
 import '../widgets/floating_heart.dart';
 import '../widgets/glass_mini.dart';
 import 'live_summary_screen.dart';
@@ -45,17 +46,13 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
   final speechController = TextEditingController();
   late Timer autoChatTimer;
 
-  final comments = <String>[
-    '하루: 드디어 왔다!',
-    '별밤: 오늘 분위기 좋다',
-    '민트: LIVE 켜줘서 고마워요',
-    '모찌: 오늘 분위기 좋다',
-  ];
+  final comments = <String>[];
   final userSpeechHistory = <String>[];
 
   @override
   void initState() {
     super.initState();
+    comments.addAll(ThemeCommentService.initialComments(widget.themeTitle));
     startAutoChat();
   }
 
@@ -100,15 +97,11 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
 
   void startAutoChat() {
     autoChatTimer = Timer.periodic(const Duration(seconds: 4), (_) {
-      final autoMessages = [
-        '하루: 오늘 텐션 좋다',
-        '별밤: 이 시간 라방 너무 좋음',
-        '민트: 채팅 분위기 따뜻하다',
-        '모찌: ${widget.stageName} 오늘 말투 좋네',
-        '루나틱: ${widget.fandomName} 출석 완료',
-        '새벽이: 조명 분위기 미쳤다',
-        '하트요정: 하트 누르고 갑니다 💖',
-      ];
+      final autoMessages = ThemeCommentService.autoMessages(
+        widget.themeTitle,
+        widget.stageName,
+        widget.fandomName,
+      );
 
       setState(() {
         comments.add(
