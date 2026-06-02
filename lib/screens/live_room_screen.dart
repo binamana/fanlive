@@ -91,6 +91,8 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
       stageName: widget.stageName,
       fandomName: widget.fandomName,
       themeTitle: widget.themeTitle,
+      recentComments: _latestComments(10),
+      fanAffection: fanAffection,
     );
 
     setState(() {
@@ -104,6 +106,11 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
 
     speechFocusNode.requestFocus();
     addCommentsWithPacing(reaction.comments);
+  }
+
+  List<String> _latestComments(int count) {
+    final startIndex = comments.length > count ? comments.length - count : 0;
+    return comments.sublist(startIndex);
   }
 
   Future<void> addCommentsWithPacing(List<String> newComments) async {
