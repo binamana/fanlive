@@ -1,0 +1,16 @@
+{
+  "name": "fanlive-ai-proxy",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mocked backend scaffold for future FANLIVE AI fan reaction proxy.",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
