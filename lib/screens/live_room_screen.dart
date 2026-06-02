@@ -85,6 +85,7 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
         text: text,
         stageName: widget.stageName,
         fandomName: widget.fandomName,
+        themeTitle: widget.themeTitle,
       );
 
       comments.addAll(reaction.comments);
