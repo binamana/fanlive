@@ -11,10 +11,10 @@ import '../app/fanlive_globals.dart'
         globalFanMessages,
         globalLevel;
 import '../models/broadcast_record.dart';
+import '../services/ai_fan_service.dart';
 import '../services/broadcast_summary_service.dart';
 import '../services/fan_mail_service.dart';
 import '../services/fan_growth_service.dart';
-import '../services/fan_reaction_engine.dart';
 import '../services/fanlive_storage.dart'
     show saveBroadcastRecords, saveFanAffection, saveFanMessages, saveFanState;
 import '../services/theme_comment_service.dart';
@@ -44,6 +44,7 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
   int floatingHeartKey = 0;
 
   final speechController = TextEditingController();
+  final speechFocusNode = FocusNode();
   late Timer autoChatTimer;
 
   final comments = <String>[];
@@ -52,13 +53,18 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
   @override
   void initState() {
     super.initState();
-    comments.addAll(ThemeCommentService.initialComments(widget.themeTitle));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      addCommentsWithPacing(
+        ThemeCommentService.initialComments(widget.themeTitle),
+      );
+    });
     startAutoChat();
   }
 
   @override
   void dispose() {
     autoChatTimer.cancel();
+    speechFocusNode.dispose();
     speechController.dispose();
     super.dispose();
   }
@@ -75,25 +81,43 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
 
   void sendSpeech() {
     final text = speechController.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty) {
+      speechFocusNode.requestFocus();
+      return;
+    }
+
+    final reaction = AiFanService.reactToSpeech(
+      text: text,
+      stageName: widget.stageName,
+      fandomName: widget.fandomName,
+      themeTitle: widget.themeTitle,
+    );
 
     setState(() {
       comments.add('나: $text');
       userSpeechHistory.add(text);
-
-      final reaction = FanReactionEngine.reactToSpeech(
-        text: text,
-        stageName: widget.stageName,
-        fandomName: widget.fandomName,
-        themeTitle: widget.themeTitle,
-      );
-
-      comments.addAll(reaction.comments);
       viewers += reaction.viewerDelta;
       hearts += reaction.heartDelta;
 
       speechController.clear();
     });
+
+    speechFocusNode.requestFocus();
+    addCommentsWithPacing(reaction.comments);
+  }
+
+  Future<void> addCommentsWithPacing(List<String> newComments) async {
+    for (var index = 0; index < newComments.length; index += 1) {
+      if (index > 0) {
+        await Future.delayed(const Duration(milliseconds: 320));
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        comments.add(newComments[index]);
+      });
+    }
   }
 
   void startAutoChat() {
@@ -305,6 +329,7 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
                       Expanded(
                         child: TextField(
                           controller: speechController,
+                          focusNode: speechFocusNode,
                           style: const TextStyle(color: Colors.white),
                           onSubmitted: (_) => sendSpeech(),
                           decoration: InputDecoration(
