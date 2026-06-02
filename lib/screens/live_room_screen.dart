@@ -79,29 +79,37 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
     });
   }
 
-  void sendSpeech() {
+  void sendSpeech() async {
     final text = speechController.text.trim();
     if (text.isEmpty) {
       speechFocusNode.requestFocus();
       return;
     }
 
-    final reaction = AiFanService.reactToSpeech(
-      text: text,
-      stageName: widget.stageName,
-      fandomName: widget.fandomName,
-      themeTitle: widget.themeTitle,
-      recentComments: _latestComments(10),
-      fanAffection: fanAffection,
-    );
+    final recentComments = _latestComments(10);
 
     setState(() {
       comments.add('나: $text');
       userSpeechHistory.add(text);
+      speechController.clear();
+    });
+
+    speechFocusNode.requestFocus();
+
+    final reaction = await AiFanService.reactToSpeech(
+      text: text,
+      stageName: widget.stageName,
+      fandomName: widget.fandomName,
+      themeTitle: widget.themeTitle,
+      recentComments: recentComments,
+      fanAffection: fanAffection,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
       viewers += reaction.viewerDelta;
       hearts += reaction.heartDelta;
-
-      speechController.clear();
     });
 
     speechFocusNode.requestFocus();
