@@ -1,23 +1,54 @@
 const express = require('express');
+const OpenAI = require('openai');
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
+const openaiApiKey = process.env.OPENAI_API_KEY;
+const openaiClient = openaiApiKey ? new OpenAI({ apiKey: openaiApiKey }) : null;
+const openaiModel = 'gpt-4.1-mini';
 
 app.use(express.json({ limit: '1mb' }));
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+
+  if (
+    typeof origin === 'string' &&
+    (origin.startsWith('http://localhost') ||
+      origin.startsWith('http://127.0.0.1'))
+  ) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(204);
+    return;
+  }
+
+  next();
+});
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true });
 });
 
-app.post('/fan-reaction', (req, res) => {
+app.post('/fan-reaction', async (req, res) => {
   const request = normalizeFanRequest(req.body);
+  console.log(
+    `[fan-reaction] request timestamp=${new Date().toISOString()} textLength=${request.text.length} stageName="${request.stageName}" themeTitle="${request.themeTitle}" recentComments=${request.recentComments.length}`,
+  );
+  const openaiResponse = await createOpenAIFanReaction(request);
 
-  // TODO: Call a backend-owned OpenAI Responses API integration here.
-  // TODO: Keep OPENAI_API_KEY on the server and never expose it to Flutter.
-  // TODO: Validate the AI output before returning it to the app.
-  const response = createMockFanReaction(request);
+  if (openaiResponse) {
+    console.log('[fan-reaction] OpenAI response used');
+    res.json(openaiResponse);
+    return;
+  }
 
-  res.json(response);
+  console.log('[fan-reaction] mock fallback used');
+  res.json(createMockFanReaction(request));
 });
 
 function normalizeFanRequest(body) {
@@ -47,6 +78,170 @@ function createMockFanReaction(request) {
     viewerDelta: 8,
     heartDelta: 24,
   };
+}
+
+async function createOpenAIFanReaction(request) {
+  if (!openaiClient) {
+    return null;
+  }
+
+  try {
+    const response = await openaiClient.responses.create({
+      model: openaiModel,
+      instructions: [
+        'You generate FANLIVE virtual live broadcast fan chat.',
+        'Return strict JSON only. Do not include markdown or extra text.',
+        'The JSON must contain comments, viewerDelta, and heartDelta.',
+        'comments must be exactly 3 short Korean fan chat comments.',
+        'Use these voices: 하루 is caring and emotional, 별밤 is calm and realistic, 민트 is playful and heart-heavy.',
+        'Base the comments on text, stageName, fandomName, themeTitle, recentComments, and fanAffection.',
+      ].join(' '),
+      input: JSON.stringify(request),
+      max_output_tokens: 900,
+      text: {
+        verbosity: 'medium',
+        format: {
+          type: 'json_schema',
+          name: 'fan_reaction_response',
+          strict: true,
+          schema: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['comments', 'viewerDelta', 'heartDelta'],
+            properties: {
+              comments: {
+                type: 'array',
+                items: { type: 'string' },
+              },
+              viewerDelta: { type: 'number' },
+              heartDelta: { type: 'number' },
+            },
+          },
+        },
+      },
+    });
+
+    const responseText = extractResponseText(response);
+
+    if (!responseText) {
+      console.warn(
+        `[fan-reaction] OpenAI output had no text/json content; shape=${summarizeResponseShape(response)}`,
+      );
+      return null;
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(responseText);
+    } catch (parseError) {
+      console.warn(
+        `[fan-reaction] OpenAI JSON parse failed: ${parseError.message}; shape=${summarizeResponseShape(response)}`,
+      );
+      return null;
+    }
+
+    const validatedResponse = validateFanReactionResponse(parsed);
+
+    if (!validatedResponse) {
+      console.warn(
+        `[fan-reaction] OpenAI output failed validation; shape=${summarizeResponseShape(response)}`,
+      );
+      return null;
+    }
+
+    return validatedResponse;
+  } catch (error) {
+    console.warn(`[fan-reaction] OpenAI fallback reason: ${error.message}`);
+    return null;
+  }
+}
+
+function extractResponseText(response) {
+  if (typeof response?.output_text === 'string' && response.output_text.trim()) {
+    return response.output_text.trim();
+  }
+
+  if (!Array.isArray(response?.output)) {
+    return null;
+  }
+
+  for (const outputItem of response.output) {
+    if (!Array.isArray(outputItem?.content)) {
+      continue;
+    }
+
+    for (const contentPart of outputItem.content) {
+      if (typeof contentPart?.text === 'string' && contentPart.text.trim()) {
+        return contentPart.text.trim();
+      }
+
+      if (contentPart?.json !== undefined) {
+        return typeof contentPart.json === 'string'
+          ? contentPart.json.trim()
+          : JSON.stringify(contentPart.json);
+      }
+    }
+  }
+
+  return null;
+}
+
+function validateFanReactionResponse(value) {
+  if (!isPlainObject(value)) {
+    return null;
+  }
+
+  const { comments, viewerDelta, heartDelta } = value;
+
+  if (!Array.isArray(comments) || comments.length !== 3) {
+    return null;
+  }
+
+  if (!comments.every((comment) => typeof comment === 'string' && comment.trim())) {
+    return null;
+  }
+
+  if (
+    !Number.isFinite(viewerDelta) ||
+    !Number.isFinite(heartDelta) ||
+    viewerDelta < 0 ||
+    heartDelta < 0
+  ) {
+    return null;
+  }
+
+  return {
+    comments: comments.map((comment) => comment.trim()),
+    viewerDelta: Math.trunc(viewerDelta),
+    heartDelta: Math.trunc(heartDelta),
+  };
+}
+
+function summarizeResponseShape(response) {
+  const output = Array.isArray(response?.output) ? response.output : [];
+  const outputSummary = output.map((outputItem) => {
+    const content = Array.isArray(outputItem?.content) ? outputItem.content : [];
+
+    return {
+      type: outputItem?.type || null,
+      contentCount: content.length,
+      content: content.map((contentPart) => ({
+        type: contentPart?.type || null,
+        hasText: typeof contentPart?.text === 'string',
+        textLength:
+          typeof contentPart?.text === 'string' ? contentPart.text.length : 0,
+        hasJson: contentPart?.json !== undefined,
+      })),
+    };
+  });
+
+  return JSON.stringify({
+    hasOutputText: typeof response?.output_text === 'string',
+    outputTextLength:
+      typeof response?.output_text === 'string' ? response.output_text.length : 0,
+    outputCount: output.length,
+    output: outputSummary,
+  });
 }
 
 function toStringValue(value) {

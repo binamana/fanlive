@@ -2,7 +2,10 @@
 
 Backend scaffold for a future FANLIVE AI fan chat proxy.
 
-This service is intentionally mocked for now. It does not call OpenAI and does not require an API key to run locally.
+This service can run in two modes:
+
+- Without `OPENAI_API_KEY`: returns a local mock response.
+- With `OPENAI_API_KEY`: calls the OpenAI Responses API from the backend, validates the JSON output, and falls back to the mock response if anything fails.
 
 ## Install
 
@@ -21,6 +24,23 @@ By default, the server listens on port `3000`.
 ```bash
 POST http://localhost:3000/fan-reaction
 ```
+
+## Optional OpenAI Mode
+
+Set `OPENAI_API_KEY` in the server environment before starting the proxy:
+
+```bash
+OPENAI_API_KEY=your_key_here npm start
+```
+
+On Windows PowerShell:
+
+```powershell
+$env:OPENAI_API_KEY="your_key_here"
+npm start
+```
+
+The key stays on the backend. Flutter should call this proxy and should never receive or store `OPENAI_API_KEY`.
 
 ## Request Shape
 
@@ -51,8 +71,10 @@ Flutter will later send the same fields used by `AiFanRequest`:
 }
 ```
 
-## Future OpenAI Integration
+## OpenAI Integration
 
-Later, Flutter should call this backend instead of calling OpenAI directly. The backend will read `OPENAI_API_KEY` from the server environment, call the OpenAI Responses API, validate the model output, and return the same response shape to Flutter.
+Flutter will later call this backend instead of calling OpenAI directly. The backend reads `OPENAI_API_KEY` from the server environment, calls the OpenAI Responses API, validates the model output, and returns the same response shape to Flutter.
 
 Keep API keys only on the backend. Do not ship `OPENAI_API_KEY` in the Flutter app.
+
+If OpenAI is unavailable, the API key is missing, the model returns invalid JSON, or the request fails, the proxy returns the mock response.
