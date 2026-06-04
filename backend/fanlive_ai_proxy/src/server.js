@@ -37,7 +37,7 @@ app.get('/health', (_req, res) => {
 app.post('/fan-reaction', async (req, res) => {
   const request = normalizeFanRequest(req.body);
   console.log(
-    `[fan-reaction] request timestamp=${new Date().toISOString()} textLength=${request.text.length} stageName="${request.stageName}" themeTitle="${request.themeTitle}" recentComments=${request.recentComments.length}`,
+    `[fan-reaction] request timestamp=${new Date().toISOString()} textLength=${request.text.length} textPreview="${sanitizeLogPreview(request.text)}" stageName="${request.stageName}" themeTitle="${request.themeTitle}" recentComments=${request.recentComments.length}`,
   );
   const openaiResponse = await createOpenAIFanReaction(request);
 
@@ -57,6 +57,7 @@ function normalizeFanRequest(body) {
     stageName: toStringValue(body?.stageName),
     fandomName: toStringValue(body?.fandomName),
     themeTitle: toStringValue(body?.themeTitle),
+    sessionMemory: toStringValue(body?.sessionMemory),
     recentComments: Array.isArray(body?.recentComments)
       ? body.recentComments.map(toStringValue).slice(-10)
       : [],
@@ -95,6 +96,8 @@ async function createOpenAIFanReaction(request) {
         'comments must be exactly 3 short Korean strings, one each from 하루, 별밤, and 민트.',
         'Every comment must directly react to the latest user text field. Mention, paraphrase, or emotionally answer something specific from that text.',
         'Use themeTitle to match the broadcast mood, but do not force it if the user text is more important.',
+        'Use sessionMemory to resolve vague follow-ups like "내일도 걱정돼", "그게 좀 신경 쓰여", or "그래도 좀 낫다".',
+        'LATEST_USER_TEXT is still highest priority, but SESSION_MEMORY explains what vague words refer to.',
         'Use recentComments to avoid repeating the same phrase, emotion, or rhythm.',
         'Use fanAffection: high-affection fans can sound more familiar, warm, and teasing; low-affection fans should be supportive but less intimate.',
         'Fan voices: 하루 is emotionally sensitive, caring, and slightly worried; 하루 notices feelings behind the words.',
@@ -105,7 +108,7 @@ async function createOpenAIFanReaction(request) {
         'Good example for text "오늘 너무 피곤해": "하루: 목소리도 좀 지친 것 같아서 걱정돼요 ㅠㅠ", "별밤: 오늘은 텐션 낮아도 괜찮아요, 천천히 해요", "민트: 피곤하면 물 한입 가자... 채팅창이 지켜봄 💖"',
         'Bad example: "하루: 오늘 방송 분위기 좋아요", because it ignores the user text and feels generic.',
       ].join(' '),
-      input: JSON.stringify(request),
+      input: buildFanReactionInput(request),
       max_output_tokens: 900,
       text: {
         verbosity: 'medium',
@@ -158,11 +161,53 @@ async function createOpenAIFanReaction(request) {
       return null;
     }
 
+    console.log(
+      `[fan-reaction] validated comments=${JSON.stringify(validatedResponse.comments)}`,
+    );
     return validatedResponse;
   } catch (error) {
     console.warn(`[fan-reaction] OpenAI fallback reason: ${error.message}`);
     return null;
   }
+}
+
+function buildFanReactionInput(request) {
+  const recentComments = request.recentComments.length
+    ? request.recentComments
+        .map((comment, index) => `${index + 1}. ${comment}`)
+        .join('\n')
+    : '(none)';
+  const fanAffection = Object.keys(request.fanAffection).length
+    ? JSON.stringify(request.fanAffection)
+    : '(none)';
+  const sessionMemory = request.sessionMemory || '(empty)';
+
+  return [
+    'FANLIVE_AI_FAN_REACTION_REQUEST',
+    '',
+    'Core priority rules:',
+    '1. LATEST_USER_TEXT is the highest priority. Read it first and answer it directly.',
+    '2. Every fan comment must respond to a specific detail, phrase, feeling, or situation in LATEST_USER_TEXT.',
+    '3. Do not only react to THEME_TITLE. Theme is mood only.',
+    '4. Do not only give generic encouragement. If encouraging, name the exact reason from LATEST_USER_TEXT.',
+    '5. SESSION_MEMORY is supporting context only. Use it to resolve vague follow-ups like "내일도 걱정돼", "그게 좀 신경 쓰여", or "그래도 좀 낫다".',
+    '5a. LATEST_USER_TEXT is still highest priority, but SESSION_MEMORY explains what vague words refer to.',
+    '6. If LATEST_USER_TEXT mentions a concrete situation, each comment should reflect that situation.',
+    '7. If LATEST_USER_TEXT is vague, ask a natural short follow-up.',
+    '8. At least one of the three comments must ask a short follow-up question.',
+    '9. Avoid generic comments like "오늘 분위기 좋아요", "응원할게요", or "힘내요" unless tied to the exact user text.',
+    '',
+    `LATEST_USER_TEXT: ${request.text || '(empty)'}`,
+    `STAGE_NAME: ${request.stageName || '(empty)'}`,
+    `FANDOM_NAME: ${request.fandomName || '(empty)'}`,
+    `THEME_TITLE: ${request.themeTitle || '(empty)'}`,
+    `SESSION_MEMORY: ${sessionMemory}`,
+    'RECENT_COMMENTS:',
+    recentComments,
+    `FAN_AFFECTION: ${fanAffection}`,
+    '',
+    'Return strict JSON matching the schema. Korean only. Exactly 3 comments: 하루, 별밤, 민트.',
+  ].join('\n');
 }
 
 function extractResponseText(response) {
@@ -255,6 +300,13 @@ function summarizeResponseShape(response) {
 
 function toStringValue(value) {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function sanitizeLogPreview(value) {
+  return toStringValue(value)
+    .replace(/[\r\n\t]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .slice(0, 40);
 }
 
 function isPlainObject(value) {

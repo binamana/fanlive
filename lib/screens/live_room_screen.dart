@@ -17,6 +17,7 @@ import '../services/fan_mail_service.dart';
 import '../services/fan_growth_service.dart';
 import '../services/fanlive_storage.dart'
     show saveBroadcastRecords, saveFanAffection, saveFanMessages, saveFanState;
+import '../services/live_session_memory_service.dart';
 import '../services/theme_comment_service.dart';
 import '../widgets/floating_heart.dart';
 import '../widgets/glass_mini.dart';
@@ -39,9 +40,14 @@ class LiveRoomScreen extends StatefulWidget {
 }
 
 class _LiveRoomScreenState extends State<LiveRoomScreen> {
+  static const _typingComment = '팬들이 입력 중...';
+  static const _autoChatCooldown = Duration(seconds: 8);
+
   int viewers = 124;
   int hearts = 0;
   int floatingHeartKey = 0;
+  int _pendingAiResponses = 0;
+  DateTime _suppressAutoChatUntil = DateTime.fromMillisecondsSinceEpoch(0);
 
   final speechController = TextEditingController();
   final speechFocusNode = FocusNode();
@@ -49,6 +55,7 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
 
   final comments = <String>[];
   final userSpeechHistory = <String>[];
+  final _sessionMemory = LiveSessionMemoryService();
 
   @override
   void initState() {
@@ -64,6 +71,7 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
   @override
   void dispose() {
     autoChatTimer.cancel();
+    _sessionMemory.reset();
     speechFocusNode.dispose();
     speechController.dispose();
     super.dispose();
@@ -87,11 +95,17 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
     }
 
     final recentComments = _latestComments(10);
+    _sessionMemory.updateFromUserSpeech(text);
+    _pauseAutoChat();
 
     setState(() {
       comments.add('나: $text');
       userSpeechHistory.add(text);
       speechController.clear();
+      _pendingAiResponses += 1;
+      if (!comments.contains(_typingComment)) {
+        comments.add(_typingComment);
+      }
     });
 
     speechFocusNode.requestFocus();
@@ -103,6 +117,7 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
       themeTitle: widget.themeTitle,
       recentComments: recentComments,
       fanAffection: fanAffection,
+      sessionMemory: _sessionMemory.memory,
     );
 
     if (!mounted) return;
@@ -110,6 +125,13 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
     setState(() {
       viewers += reaction.viewerDelta;
       hearts += reaction.heartDelta;
+      if (_pendingAiResponses > 0) {
+        _pendingAiResponses -= 1;
+      }
+      if (_pendingAiResponses == 0) {
+        comments.remove(_typingComment);
+      }
+      _pauseAutoChat();
     });
 
     speechFocusNode.requestFocus();
@@ -117,8 +139,13 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
   }
 
   List<String> _latestComments(int count) {
-    final startIndex = comments.length > count ? comments.length - count : 0;
-    return comments.sublist(startIndex);
+    final chatContext = comments
+        .where((comment) => comment != _typingComment)
+        .toList(growable: false);
+    final startIndex = chatContext.length > count
+        ? chatContext.length - count
+        : 0;
+    return chatContext.sublist(startIndex);
   }
 
   Future<void> addCommentsWithPacing(List<String> newComments) async {
@@ -137,6 +164,8 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
 
   void startAutoChat() {
     autoChatTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (_shouldSkipAutoChat()) return;
+
       final autoMessages = ThemeCommentService.autoMessages(
         widget.themeTitle,
         widget.stageName,
@@ -155,6 +184,15 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
         hearts += DateTime.now().second % 5;
       });
     });
+  }
+
+  void _pauseAutoChat() {
+    _suppressAutoChatUntil = DateTime.now().add(_autoChatCooldown);
+  }
+
+  bool _shouldSkipAutoChat() {
+    return _pendingAiResponses > 0 ||
+        DateTime.now().isBefore(_suppressAutoChatUntil);
   }
 
   void endLive() {

@@ -11,6 +11,7 @@ class AiFanRequest {
   final String themeTitle;
   final List<String> recentComments;
   final Map<String, int> fanAffection;
+  final String sessionMemory;
 
   const AiFanRequest({
     required this.text,
@@ -19,6 +20,7 @@ class AiFanRequest {
     required this.themeTitle,
     required this.recentComments,
     required this.fanAffection,
+    required this.sessionMemory,
   });
 
   Map<String, Object> toJson() {
@@ -29,6 +31,7 @@ class AiFanRequest {
       'themeTitle': themeTitle,
       'recentComments': recentComments,
       'fanAffection': fanAffection,
+      'sessionMemory': sessionMemory,
     };
   }
 }
@@ -85,7 +88,7 @@ class AiFanService {
   static final _fanReactionEndpoint = Uri.parse(
     'http://localhost:3000/fan-reaction',
   );
-  static const _requestTimeout = Duration(seconds: 2);
+  static const _requestTimeout = Duration(seconds: 8);
 
   static Future<FanReactionResult> reactToSpeech({
     required String text,
@@ -94,6 +97,7 @@ class AiFanService {
     required String themeTitle,
     List<String>? recentComments,
     Map<String, int>? fanAffection,
+    String? sessionMemory,
   }) async {
     final request = AiFanRequest(
       text: text,
@@ -102,6 +106,7 @@ class AiFanService {
       themeTitle: themeTitle,
       recentComments: List.unmodifiable(recentComments ?? const []),
       fanAffection: Map.unmodifiable(fanAffection ?? const {}),
+      sessionMemory: sessionMemory?.trim() ?? '',
     );
 
     if (!shouldUseRemoteAi(request)) {
