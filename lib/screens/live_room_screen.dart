@@ -47,6 +47,7 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
   int hearts = 0;
   int floatingHeartKey = 0;
   int _pendingAiResponses = 0;
+  int _commentPacingVersion = 0;
   DateTime _suppressAutoChatUntil = DateTime.fromMillisecondsSinceEpoch(0);
 
   final speechController = TextEditingController();
@@ -60,9 +61,11 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
   @override
   void initState() {
     super.initState();
+    final initialPacingVersion = _commentPacingVersion;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       addCommentsWithPacing(
         ThemeCommentService.initialComments(widget.themeTitle),
+        version: initialPacingVersion,
       );
     });
     startAutoChat();
@@ -94,9 +97,11 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
       return;
     }
 
+    _commentPacingVersion += 1;
+    _pauseAutoChat();
+    final responsePacingVersion = _commentPacingVersion;
     final recentComments = _latestComments(10);
     _sessionMemory.updateFromUserSpeech(text);
-    _pauseAutoChat();
 
     setState(() {
       comments.add('나: $text');
@@ -135,7 +140,13 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
     });
 
     speechFocusNode.requestFocus();
-    addCommentsWithPacing(reaction.comments);
+    final displayedAiComments = await addCommentsWithPacing(
+      reaction.comments,
+      version: responsePacingVersion,
+    );
+    if (displayedAiComments) {
+      print('[LiveRoomScreen] AI comments displayed');
+    }
   }
 
   List<String> _latestComments(int count) {
@@ -148,18 +159,37 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
     return chatContext.sublist(startIndex);
   }
 
-  Future<void> addCommentsWithPacing(List<String> newComments) async {
+  Future<bool> addCommentsWithPacing(
+    List<String> newComments, {
+    int? version,
+  }) async {
     for (var index = 0; index < newComments.length; index += 1) {
+      if (_isCommentPacingCancelled(version)) {
+        print('[LiveRoomScreen] comment pacing cancelled');
+        return false;
+      }
+
       if (index > 0) {
         await Future.delayed(const Duration(milliseconds: 320));
       }
 
-      if (!mounted) return;
+      if (!mounted) return false;
+
+      if (_isCommentPacingCancelled(version)) {
+        print('[LiveRoomScreen] comment pacing cancelled');
+        return false;
+      }
 
       setState(() {
         comments.add(newComments[index]);
       });
     }
+
+    return true;
+  }
+
+  bool _isCommentPacingCancelled(int? version) {
+    return version != null && version != _commentPacingVersion;
   }
 
   void startAutoChat() {

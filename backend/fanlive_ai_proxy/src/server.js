@@ -94,6 +94,7 @@ async function createOpenAIFanReaction(request) {
         'Return strict JSON only. Do not include markdown, code fences, explanations, or extra text.',
         'The JSON must contain comments, viewerDelta, and heartDelta.',
         'comments must be exactly 3 short Korean strings, one each from 하루, 별밤, and 민트.',
+        'Each comment must start with exactly one of these names: "하루:", "별밤:", or "민트:". Do not introduce any other fan names.',
         'Every comment must directly react to the latest user text field. Mention, paraphrase, or emotionally answer something specific from that text.',
         'Use themeTitle to match the broadcast mood, but do not force it if the user text is more important.',
         'Use sessionMemory to resolve vague follow-ups like "내일도 걱정돼", "그게 좀 신경 쓰여", or "그래도 좀 낫다".',
@@ -207,6 +208,7 @@ function buildFanReactionInput(request) {
     `FAN_AFFECTION: ${fanAffection}`,
     '',
     'Return strict JSON matching the schema. Korean only. Exactly 3 comments: 하루, 별밤, 민트.',
+    'Each comment must start with "하루:", "별밤:", or "민트:" and no other fan names are allowed.',
   ].join('\n');
 }
 
