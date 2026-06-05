@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../app/fanlive_globals.dart' show fanAffection, globalFanMessages;
+import '../app/fanlive_globals.dart'
+    show fanAffection, globalCoreFanProfiles, globalFanMessages;
 import '../main.dart' show fanButtonStyle;
 import '../widgets/fanlive_background.dart';
 import '../widgets/glass_card.dart';
@@ -36,9 +37,10 @@ class FanMailboxScreen extends StatelessWidget {
                       style: TextStyle(color: Colors.white54),
                     ),
                     const SizedBox(height: 10),
-                    Text('하루 ❤️ ${fanAffection['하루'] ?? 0}'),
-                    Text('별밤 ❤️ ${fanAffection['별밤'] ?? 0}'),
-                    Text('민트 ❤️ ${fanAffection['민트'] ?? 0}'),
+                    for (final profile in globalCoreFanProfiles)
+                      Text(
+                        '${profile.name} ❤️ ${fanAffection[profile.name] ?? profile.affection} · 기분: ${profile.mood} · 서운함: ${profile.neglect}',
+                      ),
                   ],
                 ),
               ),

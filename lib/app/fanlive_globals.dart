@@ -1,4 +1,6 @@
 import '../models/broadcast_record.dart';
+import '../models/core_fan_profile.dart';
+import '../services/core_fan_service.dart';
 
 List<BroadcastRecord> globalBroadcastRecords = [];
 
@@ -17,3 +19,9 @@ Map<String, String> fanProfiles = {
 };
 
 Map<String, int> fanAffection = {'하루': 0, '별밤': 0, '민트': 0};
+
+List<CoreFanProfile> globalCoreFanProfiles =
+    CoreFanService.createDefaultProfiles()
+      ..forEach((profile) {
+        profile.affection = fanAffection[profile.name] ?? profile.affection;
+      });
