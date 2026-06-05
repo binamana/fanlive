@@ -9,6 +9,7 @@ class AiFanRequest {
   final String stageName;
   final String fandomName;
   final String themeTitle;
+  final String customConcept;
   final List<String> recentComments;
   final Map<String, int> fanAffection;
   final String sessionMemory;
@@ -18,6 +19,7 @@ class AiFanRequest {
     required this.stageName,
     required this.fandomName,
     required this.themeTitle,
+    required this.customConcept,
     required this.recentComments,
     required this.fanAffection,
     required this.sessionMemory,
@@ -29,6 +31,7 @@ class AiFanRequest {
       'stageName': stageName,
       'fandomName': fandomName,
       'themeTitle': themeTitle,
+      'customConcept': customConcept,
       'recentComments': recentComments,
       'fanAffection': fanAffection,
       'sessionMemory': sessionMemory,
@@ -95,6 +98,7 @@ class AiFanService {
     required String stageName,
     required String fandomName,
     required String themeTitle,
+    String? customConcept,
     List<String>? recentComments,
     Map<String, int>? fanAffection,
     String? sessionMemory,
@@ -104,6 +108,7 @@ class AiFanService {
       stageName: stageName,
       fandomName: fandomName,
       themeTitle: themeTitle,
+      customConcept: customConcept?.trim() ?? '',
       recentComments: List.unmodifiable(recentComments ?? const []),
       fanAffection: Map.unmodifiable(fanAffection ?? const {}),
       sessionMemory: sessionMemory?.trim() ?? '',

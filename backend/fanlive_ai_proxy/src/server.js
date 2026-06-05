@@ -57,6 +57,7 @@ function normalizeFanRequest(body) {
     stageName: toStringValue(body?.stageName),
     fandomName: toStringValue(body?.fandomName),
     themeTitle: toStringValue(body?.themeTitle),
+    customConcept: toStringValue(body?.customConcept),
     sessionMemory: toStringValue(body?.sessionMemory),
     recentComments: Array.isArray(body?.recentComments)
       ? body.recentComments.map(toStringValue).slice(-10)
@@ -66,7 +67,11 @@ function normalizeFanRequest(body) {
 }
 
 function createMockFanReaction(request) {
-  const themePrefix = request.themeTitle ? `${request.themeTitle} 분위기` : '오늘 분위기';
+  const themePrefix = request.customConcept
+    ? `${request.customConcept} 컨셉`
+    : request.themeTitle
+      ? `${request.themeTitle} 분위기`
+      : '오늘 분위기';
   const stageName = request.stageName || 'FANLIVE';
   const fandomName = request.fandomName || '팬덤';
 
@@ -96,6 +101,8 @@ async function createOpenAIFanReaction(request) {
         'comments must be exactly 3 short Korean strings, one each from 하루, 별밤, and 민트.',
         'Each comment must start with exactly one of these names: "하루:", "별밤:", or "민트:". Do not introduce any other fan names.',
         'Every comment must directly react to the latest user text field. Mention, paraphrase, or emotionally answer something specific from that text.',
+        'CUSTOM_CONCEPT is user-defined broadcast context. If present, use it strongly with LATEST_USER_TEXT.',
+        'THEME_TITLE is still useful, but CUSTOM_CONCEPT is more specific and should guide the fan reaction more.',
         'Use themeTitle to match the broadcast mood, but do not force it if the user text is more important.',
         'Use sessionMemory to resolve vague follow-ups like "내일도 걱정돼", "그게 좀 신경 쓰여", or "그래도 좀 낫다".',
         'LATEST_USER_TEXT is still highest priority, but SESSION_MEMORY explains what vague words refer to.',
@@ -182,6 +189,7 @@ function buildFanReactionInput(request) {
     ? JSON.stringify(request.fanAffection)
     : '(none)';
   const sessionMemory = request.sessionMemory || '(empty)';
+  const customConcept = request.customConcept || '(empty)';
 
   return [
     'FANLIVE_AI_FAN_REACTION_REQUEST',
@@ -189,19 +197,21 @@ function buildFanReactionInput(request) {
     'Core priority rules:',
     '1. LATEST_USER_TEXT is the highest priority. Read it first and answer it directly.',
     '2. Every fan comment must respond to a specific detail, phrase, feeling, or situation in LATEST_USER_TEXT.',
-    '3. Do not only react to THEME_TITLE. Theme is mood only.',
-    '4. Do not only give generic encouragement. If encouraging, name the exact reason from LATEST_USER_TEXT.',
-    '5. SESSION_MEMORY is supporting context only. Use it to resolve vague follow-ups like "내일도 걱정돼", "그게 좀 신경 쓰여", or "그래도 좀 낫다".',
-    '5a. LATEST_USER_TEXT is still highest priority, but SESSION_MEMORY explains what vague words refer to.',
-    '6. If LATEST_USER_TEXT mentions a concrete situation, each comment should reflect that situation.',
-    '7. If LATEST_USER_TEXT is vague, ask a natural short follow-up.',
-    '8. At least one of the three comments must ask a short follow-up question.',
-    '9. Avoid generic comments like "오늘 분위기 좋아요", "응원할게요", or "힘내요" unless tied to the exact user text.',
+    '3. CUSTOM_CONCEPT is user-defined broadcast context. If present, use it strongly together with LATEST_USER_TEXT.',
+    '4. THEME_TITLE is still useful, but CUSTOM_CONCEPT is more specific. Do not only react to THEME_TITLE.',
+    '5. Do not only give generic encouragement. If encouraging, name the exact reason from LATEST_USER_TEXT.',
+    '6. SESSION_MEMORY is supporting context only. Use it to resolve vague follow-ups like "내일도 걱정돼", "그게 좀 신경 쓰여", or "그래도 좀 낫다".',
+    '6a. LATEST_USER_TEXT is still highest priority, but SESSION_MEMORY explains what vague words refer to.',
+    '7. If LATEST_USER_TEXT mentions a concrete situation, each comment should reflect that situation.',
+    '8. If LATEST_USER_TEXT is vague, ask a natural short follow-up.',
+    '9. At least one of the three comments must ask a short follow-up question.',
+    '10. Avoid generic comments like "오늘 분위기 좋아요", "응원할게요", or "힘내요" unless tied to the exact user text.',
     '',
     `LATEST_USER_TEXT: ${request.text || '(empty)'}`,
     `STAGE_NAME: ${request.stageName || '(empty)'}`,
     `FANDOM_NAME: ${request.fandomName || '(empty)'}`,
     `THEME_TITLE: ${request.themeTitle || '(empty)'}`,
+    `CUSTOM_CONCEPT: ${customConcept}`,
     `SESSION_MEMORY: ${sessionMemory}`,
     'RECENT_COMMENTS:',
     recentComments,
