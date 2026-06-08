@@ -7,16 +7,23 @@ import '../app/fanlive_globals.dart'
         fanAffection,
         fanProfiles,
         globalBroadcastRecords,
+        globalCoreFanProfiles,
         globalFanCount,
         globalFanMessages,
         globalLevel;
 import '../models/broadcast_record.dart';
 import '../services/ai_fan_service.dart';
 import '../services/broadcast_summary_service.dart';
+import '../services/core_fan_service.dart';
 import '../services/fan_mail_service.dart';
 import '../services/fan_growth_service.dart';
 import '../services/fanlive_storage.dart'
-    show saveBroadcastRecords, saveFanAffection, saveFanMessages, saveFanState;
+    show
+        saveBroadcastRecords,
+        saveCoreFanProfiles,
+        saveFanAffection,
+        saveFanMessages,
+        saveFanState;
 import '../services/live_session_memory_service.dart';
 import '../services/theme_comment_service.dart';
 import '../widgets/floating_heart.dart';
@@ -139,6 +146,7 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
     final displayedAiComments = await addCommentsWithPacing(
       reaction.comments,
       version: responsePacingVersion,
+      targetedFan: _detectTargetedFan(text),
     );
     if (displayedAiComments) {
       print('[LiveRoomScreen] AI comments displayed');
@@ -158,16 +166,26 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
   Future<bool> addCommentsWithPacing(
     List<String> newComments, {
     int? version,
+    String? targetedFan,
   }) async {
-    for (var index = 0; index < newComments.length; index += 1) {
+    final commentsToDisplay = _orderCommentsForDisplay(
+      newComments,
+      targetedFan,
+    );
+
+    for (var index = 0; index < commentsToDisplay.length; index += 1) {
       if (_isCommentPacingCancelled(version)) {
         print('[LiveRoomScreen] comment pacing cancelled');
         return false;
       }
 
-      if (index > 0) {
-        await Future.delayed(const Duration(milliseconds: 320));
-      }
+      await Future.delayed(
+        _commentPacingDelay(
+          index: index,
+          comment: commentsToDisplay[index],
+          targetedFan: targetedFan,
+        ),
+      );
 
       if (!mounted) return false;
 
@@ -177,11 +195,85 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
       }
 
       setState(() {
-        comments.add(newComments[index]);
+        comments.add(commentsToDisplay[index]);
       });
     }
 
     return true;
+  }
+
+  List<String> _orderCommentsForDisplay(
+    List<String> newComments,
+    String? targetedFan,
+  ) {
+    if (targetedFan == null) {
+      return List<String>.from(newComments);
+    }
+
+    final targetPrefix = '$targetedFan:';
+    final targetIndex = newComments.indexWhere(
+      (comment) => comment.trimLeft().startsWith(targetPrefix),
+    );
+
+    if (targetIndex <= 0) {
+      return List<String>.from(newComments);
+    }
+
+    return [
+      newComments[targetIndex],
+      for (var index = 0; index < newComments.length; index += 1)
+        if (index != targetIndex) newComments[index],
+    ];
+  }
+
+  Duration _commentPacingDelay({
+    required int index,
+    required String comment,
+    required String? targetedFan,
+  }) {
+    final seed = _commentPacingSeed(comment, index, targetedFan);
+
+    if (index == 0) {
+      return Duration(milliseconds: 250 + seed % 451);
+    }
+
+    if (targetedFan != null) {
+      if (index == 1) {
+        return Duration(milliseconds: 1000 + seed % 401);
+      }
+
+      return Duration(milliseconds: 1250 + seed % 551);
+    }
+
+    if (index == 1) {
+      return Duration(milliseconds: 700 + seed % 701);
+    }
+
+    return Duration(milliseconds: 900 + seed % 901);
+  }
+
+  int _commentPacingSeed(String comment, int index, String? targetedFan) {
+    var seed = 97 * (index + 1);
+
+    for (final codeUnit in comment.codeUnits) {
+      seed = (seed * 31 + codeUnit) & 0x7fffffff;
+    }
+
+    for (final codeUnit in (targetedFan ?? '').codeUnits) {
+      seed = (seed * 31 + codeUnit) & 0x7fffffff;
+    }
+
+    return seed;
+  }
+
+  String? _detectTargetedFan(String text) {
+    final matchedFans = <String>[
+      if (text.contains('하루')) '하루',
+      if (text.contains('별밤')) '별밤',
+      if (text.contains('민트')) '민트',
+    ];
+
+    return matchedFans.length == 1 ? matchedFans.first : null;
   }
 
   bool _isCommentPacingCancelled(int? version) {
@@ -222,11 +314,31 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
       globalFanMessages.insert(0, message);
     }
 
-    saveFanMessages();
-
     FanGrowthService.applyAffectionGrowth(fanAffection);
+    CoreFanService.syncFromLegacyFanAffection(
+      globalCoreFanProfiles,
+      fanAffection,
+    );
+    CoreFanService.applyThemeAffinity(
+      globalCoreFanProfiles,
+      widget.themeTitle,
+    );
+    final relationshipEvents = CoreFanService.generateRelationshipEvents(
+      globalCoreFanProfiles,
+      widget.themeTitle,
+    );
+    CoreFanService.syncToLegacyFanAffection(
+      globalCoreFanProfiles,
+      fanAffection,
+    );
 
+    for (final message in relationshipEvents.reversed) {
+      globalFanMessages.insert(0, message);
+    }
+
+    saveCoreFanProfiles();
     saveFanAffection();
+    saveFanMessages();
 
     globalFanCount += FanGrowthService.calculateNewFans(viewers);
 

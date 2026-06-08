@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../app/fanlive_globals.dart' as app;
 import '../models/broadcast_record.dart';
+import '../models/core_fan_profile.dart';
+import 'core_fan_service.dart';
 
 Future<void> saveFanState() async {
   final prefs = await SharedPreferences.getInstance();
@@ -51,6 +53,74 @@ Future<void> loadFanAffection() async {
   app.fanAffection['하루'] = prefs.getInt('affection_haru') ?? 0;
   app.fanAffection['별밤'] = prefs.getInt('affection_byeolbam') ?? 0;
   app.fanAffection['민트'] = prefs.getInt('affection_mint') ?? 0;
+}
+
+Future<void> saveCoreFanProfiles() async {
+  final prefs = await SharedPreferences.getInstance();
+
+  CoreFanService.syncToLegacyFanAffection(
+    app.globalCoreFanProfiles,
+    app.fanAffection,
+  );
+
+  final profilesJson = app.globalCoreFanProfiles
+      .map((profile) => jsonEncode(profile.toJson()))
+      .toList();
+
+  await prefs.setStringList('coreFanProfiles', profilesJson);
+}
+
+Future<void> loadCoreFanProfiles() async {
+  final prefs = await SharedPreferences.getInstance();
+  final profilesJson = prefs.getStringList('coreFanProfiles');
+
+  if (profilesJson == null || profilesJson.isEmpty) {
+    _loadDefaultCoreFanProfilesFromLegacyAffection();
+    return;
+  }
+
+  try {
+    final loadedProfiles = <CoreFanProfile>[];
+
+    for (final profileString in profilesJson) {
+      final decodedProfile = jsonDecode(profileString);
+
+      if (decodedProfile is Map) {
+        loadedProfiles.add(
+          CoreFanProfile.fromJson(
+            Map<String, dynamic>.from(decodedProfile),
+          ),
+        );
+      }
+    }
+
+    if (loadedProfiles.isEmpty) {
+      _loadDefaultCoreFanProfilesFromLegacyAffection();
+      return;
+    }
+
+    app.globalCoreFanProfiles = CoreFanService.mergeWithDefaultProfiles(
+      loadedProfiles,
+    );
+    CoreFanService.syncToLegacyFanAffection(
+      app.globalCoreFanProfiles,
+      app.fanAffection,
+    );
+  } catch (_) {
+    _loadDefaultCoreFanProfilesFromLegacyAffection();
+  }
+}
+
+void _loadDefaultCoreFanProfilesFromLegacyAffection() {
+  app.globalCoreFanProfiles = CoreFanService.createDefaultProfiles();
+  CoreFanService.syncFromLegacyFanAffection(
+    app.globalCoreFanProfiles,
+    app.fanAffection,
+  );
+  CoreFanService.syncToLegacyFanAffection(
+    app.globalCoreFanProfiles,
+    app.fanAffection,
+  );
 }
 
 Future<void> loadBroadcastRecords() async {

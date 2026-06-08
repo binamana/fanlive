@@ -67,12 +67,45 @@ class CoreFanService {
   ) {
     for (final profile in profiles) {
       if (profile.favoriteThemes.contains(themeTitle)) {
-        profile.affection += 2;
+        profile.affection = _clampNonNegative(profile.affection + 2);
         profile.mood = _improveMood(profile.mood);
       } else if (profile.dislikedThemes.contains(themeTitle)) {
-        profile.neglect += 1;
+        profile.neglect = _clampNonNegative(profile.neglect + 1);
+      }
+
+      _clampProfile(profile);
+    }
+  }
+
+  static List<String> generateRelationshipEvents(
+    List<CoreFanProfile> profiles,
+    String themeTitle, {
+    int maxMessages = 3,
+  }) {
+    if (profiles.isEmpty || maxMessages <= 0) {
+      return [];
+    }
+
+    final events = <String>[];
+
+    for (final profile in profiles) {
+      if (events.length >= maxMessages) {
+        return events;
+      }
+
+      if (profile.favoriteThemes.contains(themeTitle)) {
+        events.add(_favoriteThemeEvent(profile.name));
+      } else if (profile.dislikedThemes.contains(themeTitle)) {
+        events.add('${profile.name}이 오늘 방송에서는 조금 서운했던 것 같아요. 서운함 +1');
       }
     }
+
+    if (events.isEmpty) {
+      final profile = profiles[_stableProfileIndex(profiles, themeTitle)];
+      events.add(_neutralThemeEvent(profile));
+    }
+
+    return events.take(maxMessages).toList();
   }
 
   static void syncFromLegacyFanAffection(
@@ -83,8 +116,10 @@ class CoreFanService {
       final legacyAffection = fanAffection[profile.name];
 
       if (legacyAffection != null) {
-        profile.affection = legacyAffection;
+        profile.affection = _clampNonNegative(legacyAffection);
       }
+
+      _clampProfile(profile);
     }
   }
 
@@ -93,8 +128,26 @@ class CoreFanService {
     Map<String, int> fanAffection,
   ) {
     for (final profile in profiles) {
+      _clampProfile(profile);
       fanAffection[profile.name] = profile.affection;
     }
+  }
+
+  static List<CoreFanProfile> mergeWithDefaultProfiles(
+    List<CoreFanProfile> savedProfiles,
+  ) {
+    final profiles = createDefaultProfiles();
+
+    for (var index = 0; index < profiles.length; index += 1) {
+      final savedProfile = findByName(savedProfiles, profiles[index].name);
+
+      if (savedProfile != null) {
+        _clampProfile(savedProfile);
+        profiles[index] = savedProfile;
+      }
+    }
+
+    return profiles;
   }
 
   static String _improveMood(String mood) {
@@ -105,8 +158,61 @@ class CoreFanService {
         return 'warm';
       case 'warm':
         return 'happy';
+      case 'happy':
+        return 'happy';
       default:
-        return mood;
+        return 'calm';
     }
+  }
+
+  static void _clampProfile(CoreFanProfile profile) {
+    profile.affection = _clampNonNegative(profile.affection);
+    profile.neglect = _clampNonNegative(profile.neglect);
+
+    if (!CoreFanProfile.allowedMoods.contains(profile.mood)) {
+      profile.mood = 'calm';
+    }
+  }
+
+  static int _clampNonNegative(int value) {
+    return value < 0 ? 0 : value;
+  }
+
+  static String _favoriteThemeEvent(String name) {
+    switch (name) {
+      case '하루':
+        return '하루가 오늘 방송에 더 가까워진 것 같아요. ❤️ +2';
+      case '별밤':
+        return '별밤이 오늘 방송을 더 믿고 지켜보게 된 것 같아요. ❤️ +2';
+      case '민트':
+        return '민트가 오늘 방송에 더 신난 것 같아요. ❤️ +2';
+      default:
+        return '$name이 오늘 방송에 더 가까워진 것 같아요. ❤️ +2';
+    }
+  }
+
+  static String _neutralThemeEvent(CoreFanProfile profile) {
+    switch (profile.name) {
+      case '하루':
+        return '하루는 오늘 방송을 조용히 오래 지켜봤어요.';
+      case '별밤':
+        return '별밤은 오늘 방송을 차분하게 지켜봤어요.';
+      case '민트':
+        return '민트가 다음 팬 수다 방송을 기다리고 있어요.';
+      default:
+        return '${profile.name}이 오늘 방송을 지켜봤어요.';
+    }
+  }
+
+  static int _stableProfileIndex(
+    List<CoreFanProfile> profiles,
+    String themeTitle,
+  ) {
+    final seed = themeTitle.codeUnits.fold<int>(
+      0,
+      (sum, codeUnit) => sum + codeUnit,
+    );
+
+    return seed % profiles.length;
   }
 }

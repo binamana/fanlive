@@ -10,6 +10,7 @@ void main() async {
   await loadBroadcastRecords();
   await loadFanMessages();
   await loadFanAffection();
+  await loadCoreFanProfiles();
   await loadCharacter();
   runApp(const FanLiveApp());
 }

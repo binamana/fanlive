@@ -10,6 +10,12 @@ class AiFanRequest {
   final String fandomName;
   final String themeTitle;
   final String customConcept;
+  final String conversationMode;
+  final String targetFanName;
+  final String targetFanPersonality;
+  final String targetFanMood;
+  final int targetFanAffection;
+  final int targetFanNeglect;
   final List<String> recentComments;
   final Map<String, int> fanAffection;
   final String sessionMemory;
@@ -20,6 +26,12 @@ class AiFanRequest {
     required this.fandomName,
     required this.themeTitle,
     required this.customConcept,
+    required this.conversationMode,
+    required this.targetFanName,
+    required this.targetFanPersonality,
+    required this.targetFanMood,
+    required this.targetFanAffection,
+    required this.targetFanNeglect,
     required this.recentComments,
     required this.fanAffection,
     required this.sessionMemory,
@@ -32,6 +44,12 @@ class AiFanRequest {
       'fandomName': fandomName,
       'themeTitle': themeTitle,
       'customConcept': customConcept,
+      'conversationMode': conversationMode,
+      'targetFanName': targetFanName,
+      'targetFanPersonality': targetFanPersonality,
+      'targetFanMood': targetFanMood,
+      'targetFanAffection': targetFanAffection,
+      'targetFanNeglect': targetFanNeglect,
       'recentComments': recentComments,
       'fanAffection': fanAffection,
       'sessionMemory': sessionMemory,
@@ -99,6 +117,12 @@ class AiFanService {
     required String fandomName,
     required String themeTitle,
     String? customConcept,
+    String? conversationMode,
+    String? targetFanName,
+    String? targetFanPersonality,
+    String? targetFanMood,
+    int? targetFanAffection,
+    int? targetFanNeglect,
     List<String>? recentComments,
     Map<String, int>? fanAffection,
     String? sessionMemory,
@@ -109,6 +133,12 @@ class AiFanService {
       fandomName: fandomName,
       themeTitle: themeTitle,
       customConcept: customConcept?.trim() ?? '',
+      conversationMode: _conversationModeValue(conversationMode),
+      targetFanName: targetFanName?.trim() ?? '',
+      targetFanPersonality: targetFanPersonality?.trim() ?? '',
+      targetFanMood: targetFanMood?.trim() ?? '',
+      targetFanAffection: targetFanAffection ?? 0,
+      targetFanNeglect: targetFanNeglect ?? 0,
       recentComments: List.unmodifiable(recentComments ?? const []),
       fanAffection: Map.unmodifiable(fanAffection ?? const {}),
       sessionMemory: sessionMemory?.trim() ?? '',
@@ -192,12 +222,63 @@ class AiFanService {
   static FanReactionResult _localFallback(AiFanRequest request) {
     // TODO: Keep this fallback available even after the remote AI path ships.
     // TODO: The backend will own future OpenAI Responses API calls.
+    if (request.conversationMode == 'one_on_one') {
+      return FanReactionResult(
+        comments: [_oneOnOneFallbackComment(request)],
+        viewerDelta: 1,
+        heartDelta: 5,
+      );
+    }
+
     return FanReactionEngine.reactToSpeech(
       text: request.text,
       stageName: request.stageName,
       fandomName: request.fandomName,
       themeTitle: request.themeTitle,
     );
+  }
+
+  static String _conversationModeValue(String? value) {
+    final mode = value?.trim();
+
+    return mode == 'one_on_one' ? 'one_on_one' : 'group_live';
+  }
+
+  static String _oneOnOneFallbackComment(AiFanRequest request) {
+    final fanName = request.targetFanName.isNotEmpty
+        ? request.targetFanName
+        : '하루';
+    final text = request.text;
+
+    if (_containsAny(text, ['힘들', '피곤', '속상', '고민'])) {
+      if (fanName == '별밤') {
+        return '$fanName: 지금은 답을 크게 잡기보다, 제일 부담되는 것 하나부터 줄여보면 좋겠어요.';
+      }
+
+      if (fanName == '민트') {
+        return '$fanName: 오늘은 무리 금지예요. 일단 숨 돌리고 작은 것부터 처리하자구요 💖';
+      }
+
+      return '$fanName: 그런 마음이면 혼자 버티지 말고 저한테 조금 더 말해줘도 괜찮아요.';
+    }
+
+    if (_containsAny(text, ['고마워', '감사'])) {
+      return '$fanName: 나한테 이렇게 말해줘서 고마워요. 오늘 얘기 오래 기억할게요.';
+    }
+
+    if (_containsAny(text, ['아이디어', '어떻게', '생각'])) {
+      if (fanName == '민트') {
+        return '$fanName: 일단 부담 없는 버전으로 하나 해보고 반응 좋으면 키우는 거 어때요? 💖';
+      }
+
+      if (fanName == '별밤') {
+        return '$fanName: 현실적으로는 선택지를 두 개로 줄이면 바로 움직이기 쉬워 보여요.';
+      }
+
+      return '$fanName: 너무 완벽하게 하려기보다 마음이 덜 다치는 쪽부터 골라보면 좋겠어요.';
+    }
+
+    return '$fanName: 지금 얘기 천천히 듣고 있어요. 조금 더 말해줘도 좋아요.';
   }
 
   static const _simpleGreetingPhrases = ['안녕', '하이'];
