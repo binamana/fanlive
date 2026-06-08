@@ -2,9 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../app/fanlive_globals.dart'
+    show fanAffection, globalCoreFanProfiles, globalFanMessages;
 import '../main.dart' show fanButtonStyle;
 import '../models/core_fan_profile.dart';
 import '../services/ai_fan_service.dart';
+import '../services/core_fan_service.dart';
+import '../services/fanlive_storage.dart'
+    show saveCoreFanProfiles, saveFanAffection, saveFanMessages;
 import '../widgets/fanlive_background.dart';
 import '../widgets/glass_card.dart';
 
@@ -32,6 +37,9 @@ class _OneOnOneLiveScreenState extends State<OneOnOneLiveScreen> {
   final comments = <String>[];
 
   int _responseVersion = 0;
+  int _userMessageCount = 0;
+  String? _lastUserMessage;
+  bool _hasEnded = false;
 
   @override
   void initState() {
@@ -60,6 +68,8 @@ class _OneOnOneLiveScreenState extends State<OneOnOneLiveScreen> {
 
     setState(() {
       comments.add('나: $text');
+      _userMessageCount += 1;
+      _lastUserMessage = text;
       messageController.clear();
 
       if (!comments.contains(_typingComment)) {
@@ -132,6 +142,53 @@ class _OneOnOneLiveScreenState extends State<OneOnOneLiveScreen> {
     );
 
     return '$fanPrefix $responseText';
+  }
+
+  Future<void> endOneOnOneLive() async {
+    if (_hasEnded) {
+      return;
+    }
+
+    _hasEnded = true;
+    _responseVersion += 1;
+
+    if (_userMessageCount > 0 && _lastUserMessage != null) {
+      final profile = CoreFanService.findByName(
+            globalCoreFanProfiles,
+            widget.fanProfile.name,
+          ) ??
+          widget.fanProfile;
+      final previousMood = profile.mood;
+      final previousNeglect = profile.neglect;
+
+      CoreFanService.applyOneOnOneLiveResult(
+        profile,
+        userMessageCount: _userMessageCount,
+      );
+      widget.fanProfile.affection = profile.affection;
+      widget.fanProfile.mood = profile.mood;
+      widget.fanProfile.neglect = profile.neglect;
+      fanAffection[profile.name] = profile.affection;
+
+      final followUpMessage = CoreFanService.generateOneOnOneFollowUpMessage(
+        profile,
+        userMessageCount: _userMessageCount,
+        previousMood: previousMood,
+        previousNeglect: previousNeglect,
+      );
+
+      if (followUpMessage != null) {
+        globalFanMessages.insert(0, followUpMessage);
+        await saveFanMessages();
+      }
+
+      await saveCoreFanProfiles();
+      await saveFanAffection();
+    }
+
+    if (!mounted) return;
+
+    Navigator.pop(context);
   }
 
   Duration oneOnOneResponseDelay(String text) {
@@ -234,9 +291,7 @@ class _OneOnOneLiveScreenState extends State<OneOnOneLiveScreen> {
                 height: 52,
                 child: ElevatedButton(
                   style: fanButtonStyle(),
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
+                  onPressed: endOneOnOneLive,
                   child: const Text('끝내기'),
                 ),
               ),

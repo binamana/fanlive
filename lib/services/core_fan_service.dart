@@ -108,6 +108,49 @@ class CoreFanService {
     return events.take(maxMessages).toList();
   }
 
+  static void applyOneOnOneLiveResult(
+    CoreFanProfile profile, {
+    required int userMessageCount,
+  }) {
+    if (userMessageCount <= 0) {
+      return;
+    }
+
+    profile.affection = _clampNonNegative(profile.affection + 3);
+    profile.neglect = _clampNonNegative(profile.neglect - 2);
+    profile.mood = _improveMood(profile.mood);
+    _clampProfile(profile);
+  }
+
+  static String? generateOneOnOneFollowUpMessage(
+    CoreFanProfile profile, {
+    required int userMessageCount,
+    String? previousMood,
+    int? previousNeglect,
+  }) {
+    if (userMessageCount <= 0) {
+      return null;
+    }
+
+    final wasDistant =
+        previousMood == 'hurt' || (previousNeglect != null && previousNeglect >= 3);
+
+    if (wasDistant) {
+      return _oneOnOneCloserAgainMessage(profile.name);
+    }
+
+    switch (profile.name) {
+      case '하루':
+        return '하루: 오늘 1:1로 얘기해줘서 마음이 조금 놓였어요.';
+      case '별밤':
+        return '별밤: 오늘 1:1 대화는 꽤 의미 있었어요. 다음엔 더 구체적으로 얘기해봐도 좋겠어요.';
+      case '민트':
+        return '민트: 1:1 라방 재밌었음ㅋㅋ 다음에도 불러줘요 💖';
+      default:
+        return '${profile.name}: 오늘 1:1로 얘기해줘서 고마워요.';
+    }
+  }
+
   static void syncFromLegacyFanAffection(
     List<CoreFanProfile> profiles,
     Map<String, int> fanAffection,
@@ -201,6 +244,19 @@ class CoreFanService {
         return '민트가 다음 팬 수다 방송을 기다리고 있어요.';
       default:
         return '${profile.name}이 오늘 방송을 지켜봤어요.';
+    }
+  }
+
+  static String _oneOnOneCloserAgainMessage(String name) {
+    switch (name) {
+      case '하루':
+        return '하루: 오늘 1:1로 얘기하니까 다시 조금 가까워진 것 같아서 마음이 놓였어요.';
+      case '별밤':
+        return '별밤: 오늘 대화로 거리가 조금 줄어든 느낌이에요. 다음엔 더 편하게 얘기해봐요.';
+      case '민트':
+        return '민트: 오늘 1:1로 다시 가까워진 느낌ㅋㅋ 다음에도 불러줘요 💖';
+      default:
+        return '$name: 오늘 1:1로 다시 조금 가까워진 것 같아요.';
     }
   }
 
