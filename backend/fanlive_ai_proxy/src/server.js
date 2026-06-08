@@ -37,7 +37,7 @@ app.get('/health', (_req, res) => {
 app.post('/fan-reaction', async (req, res) => {
   const request = normalizeFanRequest(req.body);
   console.log(
-    `[fan-reaction] request timestamp=${new Date().toISOString()} textLength=${request.text.length} textPreview="${sanitizeLogPreview(request.text)}" stageName="${request.stageName}" themeTitle="${request.themeTitle}" recentComments=${request.recentComments.length}`,
+    `[fan-reaction] request timestamp=${new Date().toISOString()} textLength=${request.text.length} stageName="${request.stageName}" themeTitle="${request.themeTitle}" recentComments=${request.recentComments.length}`,
   );
   const openaiResponse = await createOpenAIFanReaction(request);
 
@@ -236,7 +236,7 @@ async function createOpenAIFanReaction(request) {
     }
 
     console.log(
-      `[fan-reaction] validated comments=${JSON.stringify(validatedResponse.comments)}`,
+      `[fan-reaction] validated commentCount=${validatedResponse.comments.length}`,
     );
     return validatedResponse;
   } catch (error) {
@@ -505,13 +505,6 @@ function toNumberValue(value) {
   const numberValue = Number(value);
 
   return Number.isFinite(numberValue) ? numberValue : 0;
-}
-
-function sanitizeLogPreview(value) {
-  return toStringValue(value)
-    .replace(/[\r\n\t]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .slice(0, 40);
 }
 
 function isPlainObject(value) {

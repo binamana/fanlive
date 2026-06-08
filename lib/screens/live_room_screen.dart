@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import '../app/fanlive_globals.dart'
     show
@@ -59,10 +60,18 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
 
   final speechController = TextEditingController();
   final speechFocusNode = FocusNode();
+  final speechRecognizer = stt.SpeechToText();
 
   final comments = <String>[];
   final userSpeechHistory = <String>[];
   final _sessionMemory = LiveSessionMemoryService();
+  bool _isSpeechInitialized = false;
+  bool _isSpeechAvailable = false;
+  bool _isListeningForSpeech = false;
+  bool _speechTextCameFromRecognition = false;
+  int _speechInputVersion = 0;
+  String _speechInputPrefix = '';
+  String _speechRecognitionBuffer = '';
 
   @override
   void initState() {
@@ -78,6 +87,9 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
 
   @override
   void dispose() {
+    if (_isListeningForSpeech) {
+      unawaited(speechRecognizer.stop());
+    }
     _sessionMemory.reset();
     speechFocusNode.dispose();
     speechController.dispose();
@@ -97,10 +109,12 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
   void sendSpeech() async {
     final text = speechController.text.trim();
     if (text.isEmpty) {
+      clearSpeechInputField();
       speechFocusNode.requestFocus();
       return;
     }
 
+    final wasListeningForSpeech = _isListeningForSpeech;
     _commentPacingVersion += 1;
     final responsePacingVersion = _commentPacingVersion;
     final recentComments = _latestComments(10);
@@ -109,12 +123,17 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
     setState(() {
       comments.add('나: $text');
       userSpeechHistory.add(text);
-      speechController.clear();
+      clearSpeechInputField();
+      _isListeningForSpeech = false;
       _pendingAiResponses += 1;
       if (!comments.contains(_typingComment)) {
         comments.add(_typingComment);
       }
     });
+
+    if (wasListeningForSpeech) {
+      unawaited(stopSpeechInput());
+    }
 
     speechFocusNode.requestFocus();
 
@@ -148,9 +167,166 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
       version: responsePacingVersion,
       targetedFan: _detectTargetedFan(text),
     );
-    if (displayedAiComments) {
-      print('[LiveRoomScreen] AI comments displayed');
+    if (!displayedAiComments) return;
+  }
+
+  Future<void> toggleSpeechInput() async {
+    if (_isListeningForSpeech) {
+      await stopSpeechInput();
+      speechFocusNode.requestFocus();
+      return;
     }
+
+    final available = await ensureSpeechInitialized();
+
+    if (!mounted) return;
+
+    if (!available) {
+      resetSpeechInputState();
+      showSpeechUnavailableMessage();
+      return;
+    }
+
+    final speechInputVersion = prepareSpeechInputSession();
+
+    setState(() {
+      _isListeningForSpeech = true;
+    });
+
+    try {
+      await speechRecognizer.listen(
+        localeId: 'ko_KR',
+        partialResults: true,
+        onResult: (result) {
+          updateSpeechInputFromResult(
+            result.recognizedWords,
+            speechInputVersion,
+          );
+
+          if (result.finalResult && mounted) {
+            setState(() {
+              _isListeningForSpeech = false;
+            });
+          }
+        },
+      );
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        _isListeningForSpeech = false;
+      });
+      resetSpeechInputState();
+      showSpeechUnavailableMessage();
+    }
+  }
+
+  Future<bool> ensureSpeechInitialized() async {
+    if (_isSpeechInitialized) {
+      return _isSpeechAvailable;
+    }
+
+    final available = await speechRecognizer.initialize(
+          onStatus: handleSpeechStatus,
+          onError: handleSpeechError,
+        );
+
+    if (!mounted) return false;
+
+    _isSpeechInitialized = available;
+    _isSpeechAvailable = available;
+    return available;
+  }
+
+  int prepareSpeechInputSession() {
+    _speechInputVersion += 1;
+    _speechRecognitionBuffer = '';
+
+    if (speechController.text.trim().isNotEmpty &&
+        !_speechTextCameFromRecognition) {
+      _speechInputPrefix = speechController.text.trim();
+      return _speechInputVersion;
+    }
+
+    _speechInputPrefix = '';
+    speechController.clear();
+    _speechTextCameFromRecognition = false;
+    return _speechInputVersion;
+  }
+
+  void updateSpeechInputFromResult(String recognizedWords, int inputVersion) {
+    if (inputVersion != _speechInputVersion) return;
+
+    final recognizedText = recognizedWords.trim();
+
+    if (!mounted || recognizedText.isEmpty) return;
+
+    _speechRecognitionBuffer = recognizedText;
+    final inputText = [
+      if (_speechInputPrefix.isNotEmpty) _speechInputPrefix,
+      _speechRecognitionBuffer,
+    ].join(' ').trim();
+
+    speechController.text = inputText;
+    speechController.selection = TextSelection.collapsed(
+      offset: speechController.text.length,
+    );
+    _speechTextCameFromRecognition = true;
+    speechFocusNode.requestFocus();
+  }
+
+  Future<void> stopSpeechInput() async {
+    try {
+      await speechRecognizer.stop();
+    } catch (_) {
+      // Speech plugins can throw on unsupported platforms; the UI already falls
+      // back to text input.
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _isListeningForSpeech = false;
+    });
+  }
+
+  void handleSpeechStatus(String status) {
+    if (!mounted) return;
+
+    if (status == 'done' || status == 'notListening') {
+      setState(() {
+        _isListeningForSpeech = false;
+      });
+      speechFocusNode.requestFocus();
+    }
+  }
+
+  void handleSpeechError(dynamic error) {
+    if (!mounted) return;
+
+    setState(() {
+      _isListeningForSpeech = false;
+    });
+    resetSpeechInputState();
+    showSpeechUnavailableMessage();
+  }
+
+  void resetSpeechInputState() {
+    _speechInputPrefix = '';
+    _speechRecognitionBuffer = '';
+    _speechTextCameFromRecognition = false;
+  }
+
+  void clearSpeechInputField() {
+    _speechInputVersion += 1;
+    speechController.value = const TextEditingValue();
+    resetSpeechInputState();
+  }
+
+  void showSpeechUnavailableMessage() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('음성 인식을 사용할 수 없어요.')),
+    );
   }
 
   List<String> _latestComments(int count) {
@@ -175,7 +351,6 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
 
     for (var index = 0; index < commentsToDisplay.length; index += 1) {
       if (_isCommentPacingCancelled(version)) {
-        print('[LiveRoomScreen] comment pacing cancelled');
         return false;
       }
 
@@ -190,7 +365,6 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
       if (!mounted) return false;
 
       if (_isCommentPacingCancelled(version)) {
-        print('[LiveRoomScreen] comment pacing cancelled');
         return false;
       }
 
@@ -496,8 +670,14 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
                           focusNode: speechFocusNode,
                           style: const TextStyle(color: Colors.white),
                           onSubmitted: (_) => sendSpeech(),
+                          onChanged: (_) {
+                            _speechTextCameFromRecognition = false;
+                            _speechRecognitionBuffer = '';
+                          },
                           decoration: InputDecoration(
-                            hintText: '지금 말하기 테스트...',
+                            hintText: _isListeningForSpeech
+                                ? '듣는 중... 말한 뒤 전송을 눌러 주세요'
+                                : '지금 말하기 테스트...',
                             hintStyle: const TextStyle(color: Colors.white38),
                             filled: true,
                             fillColor: Colors.black.withOpacity(0.32),
@@ -510,6 +690,17 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
                               borderSide: BorderSide.none,
                             ),
                           ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        tooltip: _isListeningForSpeech ? '음성 입력 중지' : '음성 입력',
+                        onPressed: toggleSpeechInput,
+                        icon: Icon(
+                          _isListeningForSpeech ? Icons.mic : Icons.mic_none,
+                          color: _isListeningForSpeech
+                              ? const Color(0xFFFF4FB8)
+                              : Colors.white,
                         ),
                       ),
                       const SizedBox(width: 8),

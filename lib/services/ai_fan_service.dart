@@ -1,7 +1,9 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../config/fanlive_config.dart';
 import 'fan_reaction_engine.dart';
 
 class AiFanRequest {
@@ -110,8 +112,8 @@ class AiFanResponse {
 class AiFanService {
   const AiFanService._();
 
-  static final _fanReactionEndpoint = Uri.parse(
-    'http://localhost:3000/fan-reaction',
+  static final _fanReactionEndpoint = FanLiveConfig.aiProxyEndpoint(
+    '/fan-reaction',
   );
   static const _requestTimeout = Duration(seconds: 8);
 
@@ -149,11 +151,10 @@ class AiFanService {
     );
 
     if (!shouldUseRemoteAi(request)) {
-      print('[AiFanService] local fallback used (cost-control)');
       return _localFallback(request);
     }
 
-    print('[AiFanService] remote backend requested');
+    _log('remote requested');
 
     try {
       final response = await http
@@ -165,27 +166,29 @@ class AiFanService {
           .timeout(_requestTimeout);
 
       if (response.statusCode != 200) {
-        print(
-          '[AiFanService] local fallback used (backend status ${response.statusCode})',
-        );
+        _log('fallback used: status ${response.statusCode}');
         return _localFallback(request);
       }
 
       final decodedBody = jsonDecode(response.body);
 
       if (decodedBody is! Map<String, dynamic>) {
-        print('[AiFanService] local fallback used (invalid backend JSON)');
+        _log('fallback used: invalid json');
         return _localFallback(request);
       }
 
       final result = AiFanResponse.fromJson(decodedBody).toFanReactionResult();
-      print('[AiFanService] remote backend used');
+      _log('remote used');
       return result;
     } catch (error) {
-      print(
-        '[AiFanService] local fallback used (backend failed: ${error.runtimeType})',
-      );
+      _log('fallback used: ${error.runtimeType}');
       return _localFallback(request);
+    }
+  }
+
+  static void _log(String message) {
+    if (kDebugMode) {
+      debugPrint('[AiFanService] $message');
     }
   }
 

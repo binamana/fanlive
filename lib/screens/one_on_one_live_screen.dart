@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import '../app/fanlive_globals.dart'
     show fanAffection, globalCoreFanProfiles, globalFanMessages;
@@ -34,12 +35,20 @@ class _OneOnOneLiveScreenState extends State<OneOnOneLiveScreen> {
 
   final messageController = TextEditingController();
   final messageFocusNode = FocusNode();
+  final speechRecognizer = stt.SpeechToText();
   final comments = <String>[];
 
   int _responseVersion = 0;
   int _userMessageCount = 0;
   String? _lastUserMessage;
   bool _hasEnded = false;
+  bool _isSpeechInitialized = false;
+  bool _isSpeechAvailable = false;
+  bool _isListeningForSpeech = false;
+  bool _speechTextCameFromRecognition = false;
+  int _speechInputVersion = 0;
+  String _speechInputPrefix = '';
+  String _speechRecognitionBuffer = '';
 
   @override
   void initState() {
@@ -49,6 +58,9 @@ class _OneOnOneLiveScreenState extends State<OneOnOneLiveScreen> {
 
   @override
   void dispose() {
+    if (_isListeningForSpeech) {
+      unawaited(speechRecognizer.stop());
+    }
     messageFocusNode.dispose();
     messageController.dispose();
     super.dispose();
@@ -58,10 +70,12 @@ class _OneOnOneLiveScreenState extends State<OneOnOneLiveScreen> {
     final text = messageController.text.trim();
 
     if (text.isEmpty) {
+      clearSpeechInputField();
       messageFocusNode.requestFocus();
       return;
     }
 
+    final wasListeningForSpeech = _isListeningForSpeech;
     _responseVersion += 1;
     final responseVersion = _responseVersion;
     final recentComments = latestComments(10);
@@ -70,12 +84,17 @@ class _OneOnOneLiveScreenState extends State<OneOnOneLiveScreen> {
       comments.add('나: $text');
       _userMessageCount += 1;
       _lastUserMessage = text;
-      messageController.clear();
+      clearSpeechInputField();
+      _isListeningForSpeech = false;
 
       if (!comments.contains(_typingComment)) {
         comments.add(_typingComment);
       }
     });
+
+    if (wasListeningForSpeech) {
+      unawaited(stopSpeechInput());
+    }
 
     messageFocusNode.requestFocus();
 
@@ -114,6 +133,164 @@ class _OneOnOneLiveScreenState extends State<OneOnOneLiveScreen> {
     }
 
     messageFocusNode.requestFocus();
+  }
+
+  Future<void> toggleSpeechInput() async {
+    if (_isListeningForSpeech) {
+      await stopSpeechInput();
+      messageFocusNode.requestFocus();
+      return;
+    }
+
+    final available = await ensureSpeechInitialized();
+
+    if (!mounted) return;
+
+    if (!available) {
+      resetSpeechInputState();
+      showSpeechUnavailableMessage();
+      return;
+    }
+
+    final speechInputVersion = prepareSpeechInputSession();
+
+    setState(() {
+      _isListeningForSpeech = true;
+    });
+
+    try {
+      await speechRecognizer.listen(
+        localeId: 'ko_KR',
+        partialResults: true,
+        onResult: (result) {
+          updateSpeechInputFromResult(
+            result.recognizedWords,
+            speechInputVersion,
+          );
+
+          if (result.finalResult && mounted) {
+            setState(() {
+              _isListeningForSpeech = false;
+            });
+          }
+        },
+      );
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        _isListeningForSpeech = false;
+      });
+      resetSpeechInputState();
+      showSpeechUnavailableMessage();
+    }
+  }
+
+  Future<bool> ensureSpeechInitialized() async {
+    if (_isSpeechInitialized) {
+      return _isSpeechAvailable;
+    }
+
+    final available = await speechRecognizer.initialize(
+      onStatus: handleSpeechStatus,
+      onError: handleSpeechError,
+    );
+
+    if (!mounted) return false;
+
+    _isSpeechInitialized = available;
+    _isSpeechAvailable = available;
+    return available;
+  }
+
+  int prepareSpeechInputSession() {
+    _speechInputVersion += 1;
+    _speechRecognitionBuffer = '';
+
+    if (messageController.text.trim().isNotEmpty &&
+        !_speechTextCameFromRecognition) {
+      _speechInputPrefix = messageController.text.trim();
+      return _speechInputVersion;
+    }
+
+    _speechInputPrefix = '';
+    messageController.clear();
+    _speechTextCameFromRecognition = false;
+    return _speechInputVersion;
+  }
+
+  void updateSpeechInputFromResult(String recognizedWords, int inputVersion) {
+    if (inputVersion != _speechInputVersion) return;
+
+    final recognizedText = recognizedWords.trim();
+
+    if (!mounted || recognizedText.isEmpty) return;
+
+    _speechRecognitionBuffer = recognizedText;
+    final inputText = [
+      if (_speechInputPrefix.isNotEmpty) _speechInputPrefix,
+      _speechRecognitionBuffer,
+    ].join(' ').trim();
+
+    messageController.text = inputText;
+    messageController.selection = TextSelection.collapsed(
+      offset: messageController.text.length,
+    );
+    _speechTextCameFromRecognition = true;
+    messageFocusNode.requestFocus();
+  }
+
+  Future<void> stopSpeechInput() async {
+    try {
+      await speechRecognizer.stop();
+    } catch (_) {
+      // Unsupported platforms can throw; text input remains available.
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _isListeningForSpeech = false;
+    });
+  }
+
+  void handleSpeechStatus(String status) {
+    if (!mounted) return;
+
+    if (status == 'done' || status == 'notListening') {
+      setState(() {
+        _isListeningForSpeech = false;
+      });
+      messageFocusNode.requestFocus();
+    }
+  }
+
+  void handleSpeechError(dynamic error) {
+    if (!mounted) return;
+
+    setState(() {
+      _isListeningForSpeech = false;
+    });
+    resetSpeechInputState();
+    showSpeechUnavailableMessage();
+  }
+
+  void resetSpeechInputState() {
+    _speechInputPrefix = '';
+    _speechRecognitionBuffer = '';
+    _speechTextCameFromRecognition = false;
+  }
+
+  void clearSpeechInputField() {
+    _speechInputVersion += 1;
+    messageController.value = const TextEditingValue();
+    resetSpeechInputState();
+  }
+
+  void showSpeechUnavailableMessage() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('음성 인식을 사용할 수 없어요.')),
+    );
   }
 
   List<String> latestComments(int count) {
@@ -278,8 +455,14 @@ class _OneOnOneLiveScreenState extends State<OneOnOneLiveScreen> {
                       focusNode: messageFocusNode,
                       style: const TextStyle(color: Colors.white),
                       onSubmitted: (_) => sendMessage(),
+                      onChanged: (_) {
+                        _speechTextCameFromRecognition = false;
+                        _speechRecognitionBuffer = '';
+                      },
                       decoration: InputDecoration(
-                        hintText: '${widget.fanProfile.name}에게 말하기...',
+                        hintText: _isListeningForSpeech
+                            ? '듣는 중... 말한 뒤 전송을 눌러 주세요'
+                            : '${widget.fanProfile.name}에게 말하기...',
                         hintStyle: const TextStyle(color: Colors.white38),
                         filled: true,
                         fillColor: Colors.black.withOpacity(0.32),
@@ -288,6 +471,17 @@ class _OneOnOneLiveScreenState extends State<OneOnOneLiveScreen> {
                           borderSide: BorderSide.none,
                         ),
                       ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    tooltip: _isListeningForSpeech ? '음성 입력 중지' : '음성 입력',
+                    onPressed: toggleSpeechInput,
+                    icon: Icon(
+                      _isListeningForSpeech ? Icons.mic : Icons.mic_none,
+                      color: _isListeningForSpeech
+                          ? const Color(0xFFFF4FB8)
+                          : Colors.white,
                     ),
                   ),
                   const SizedBox(width: 8),
