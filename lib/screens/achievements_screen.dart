@@ -17,6 +17,7 @@ class AchievementsScreen extends StatelessWidget {
     final allTitles = [
       '첫 데뷔',
       '감성 방송러',
+      '팬들과 버틴 하루',
       '작업 토크 장인',
       '팬서비스 요정',
       '하트 폭격',

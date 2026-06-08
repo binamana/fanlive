@@ -281,10 +281,14 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
   }
 
   void endLive() {
+    final sessionMemory = _sessionMemory.memory;
+    final conversationDigest = _sessionMemory.conversationDigest;
     final broadcastSummary = BroadcastSummaryService.calculate(
       userSpeechHistory: userSpeechHistory,
       hearts: hearts,
       viewers: viewers,
+      sessionMemory: sessionMemory,
+      conversationDigest: conversationDigest,
     );
     final bestMoment = broadcastSummary.bestMoment;
     final summary = broadcastSummary.summary;
@@ -308,6 +312,8 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
       summary: summary,
       earnedTitle: earnedTitle,
       fanProfiles: fanProfiles,
+      sessionMemory: sessionMemory,
+      conversationDigest: conversationDigest,
     );
 
     for (final message in fanMailMessages) {

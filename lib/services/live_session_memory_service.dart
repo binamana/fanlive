@@ -1,112 +1,189 @@
 class LiveSessionMemoryService {
-  static const _maxNotes = 6;
+  static const _maxRecentUserSpeech = 5;
 
-  final memoryNotes = <String>[];
-  String _latestUserSpeech = '';
+  String? _mainTopic;
+  String? _emotionalTone;
+  String? _unresolvedConcern;
+  String? _positiveTurn;
+  String _latestMeaningfulUserSpeech = '';
+  final _recentUserSpeech = <String>[];
 
   String get memory {
-    final parts = <String>[];
+    final parts = <String>[
+      if (_mainTopic != null) 'mainTopic: $_mainTopic',
+      if (_emotionalTone != null) 'emotionalTone: $_emotionalTone',
+      if (_unresolvedConcern != null)
+        'unresolvedConcern: $_unresolvedConcern',
+      if (_positiveTurn != null) 'positiveTurn: $_positiveTurn',
+      if (_latestMeaningfulUserSpeech.isNotEmpty)
+        'latestMeaningfulUserSpeech: $_latestMeaningfulUserSpeech',
+      if (_recentUserSpeech.isNotEmpty)
+        'recentUserSpeech: ${_recentUserSpeech.join(' / ')}',
+    ];
 
-    if (memoryNotes.isNotEmpty) {
-      parts.add(memoryNotes.join(' '));
+    return parts.join('\n');
+  }
+
+  List<String> get recentUserSpeech => List.unmodifiable(_recentUserSpeech);
+
+  String get conversationDigest {
+    final parts = <String>[
+      if (_mainTopic != null) _mainTopic!,
+      if (_emotionalTone != null) _emotionalTone!,
+      if (_unresolvedConcern != null) _unresolvedConcern!,
+      if (_positiveTurn != null) _positiveTurn!,
+    ];
+
+    if (parts.isNotEmpty) {
+      return parts.join(' · ');
     }
 
-    if (_latestUserSpeech.isNotEmpty) {
-      parts.add('최근 발화: $_latestUserSpeech');
-    }
-
-    return parts.join(' ');
+    return _latestMeaningfulUserSpeech.isEmpty
+        ? ''
+        : '최근 발화: $_latestMeaningfulUserSpeech';
   }
 
   void updateFromUserSpeech(String text) {
     final trimmedText = text.trim();
     if (trimmedText.isEmpty) return;
 
-    _latestUserSpeech = _shorten(trimmedText);
-
-    if (_isClassTomorrowWorry(trimmedText)) {
-      _remember(
-        '사용자가 앞서 말한 수업/학생 반응 때문에 내일도 걱정하고 있다.',
-        replaceIfContains: ['내일도 걱정'],
-      );
-    } else if (_containsAny(trimmedText, ['수업', '학생', '강의'])) {
-      final note = _containsAny(trimmedText, ['조용'])
-          ? '사용자가 수업에서 학생들이 너무 조용해서 힘들었다고 말했다.'
-          : '사용자가 수업/학생/강의 상황에 대해 이야기했다.';
-      _remember(note, replaceIfContains: ['수업', '학생', '강의']);
-    } else if (_isVagueFollowUpWorry(trimmedText)) {
-      _remember(
-        '사용자가 앞서 말한 일 때문에 계속 신경 쓰이고 걱정된다고 말했다.',
-        replaceIfContains: ['걱정', '신경'],
-      );
+    if (_isMeaningfulSpeech(trimmedText)) {
+      _latestMeaningfulUserSpeech = _shorten(trimmedText);
+      _rememberRecentSpeech(_latestMeaningfulUserSpeech);
     }
 
-    if (_containsAny(trimmedText, ['힘들', '피곤', '속상', '고민'])) {
-      _remember(
-        '사용자가 피곤하거나 힘든 상태라고 말했다.',
-        replaceIfContains: ['피곤', '힘든', '속상', '고민'],
-      );
-    }
-
-    if (_containsAny(trimmedText, ['작업', '앨범', '곡', '컴백', '발매'])) {
-      _remember(
-        '사용자가 앨범/곡/작업 이야기를 했다.',
-        replaceIfContains: ['앨범', '곡', '작업', '컴백', '발매'],
-      );
-    }
-
-    if (_containsAny(trimmedText, ['고마워', '감사', '팬'])) {
-      final note = _containsAny(trimmedText, ['덕분', '낫', '좋아'])
-          ? '사용자가 팬들 덕분에 낫다고 말했다.'
-          : '사용자가 팬들에게 고마움을 표현했다.';
-      _remember(
-        note,
-        replaceIfContains: ['팬들 덕분', '팬들에게 고마움', '고마움'],
-      );
-    }
-
-    if (_containsAny(trimmedText, ['팬미팅', '생일', '100일'])) {
-      _remember(
-        '사용자가 팬미팅/생일/100일 같은 예정 이벤트를 언급했다.',
-        replaceIfContains: ['팬미팅', '생일', '100일', '이벤트'],
-      );
-    }
-
-    if (_isVagueImprovement(trimmedText)) {
-      _remember(
-        '사용자가 앞서 말한 일에 대해 그래도 조금 나아졌다고 말했다.',
-        replaceIfContains: ['나아졌', '낫다', '낫다고'],
-      );
-    }
+    _updateTopic(trimmedText);
+    _updateEmotion(trimmedText);
+    _updateConcern(trimmedText);
+    _updatePositiveTurn(trimmedText);
   }
 
   void reset() {
-    memoryNotes.clear();
-    _latestUserSpeech = '';
+    _mainTopic = null;
+    _emotionalTone = null;
+    _unresolvedConcern = null;
+    _positiveTurn = null;
+    _latestMeaningfulUserSpeech = '';
+    _recentUserSpeech.clear();
   }
 
-  void _remember(String note, {List<String> replaceIfContains = const []}) {
-    memoryNotes.removeWhere(
-      (existingNote) =>
-          existingNote == note ||
-          replaceIfContains.any(existingNote.contains),
-    );
+  void _updateTopic(String text) {
+    if (_containsAny(text, ['수업', '학생', '강의'])) {
+      _mainTopic = _containsAny(text, ['조용', '반응'])
+          ? '수업/학생 반응'
+          : '수업/강의 이야기';
+      return;
+    }
 
-    memoryNotes.add(note);
+    if (_containsAny(text, ['작업', '앨범', '곡', '컴백', '발매', '노래'])) {
+      _mainTopic = _containsAny(text, ['앨범', '컴백', '발매'])
+          ? '앨범/컴백 준비'
+          : '작업/음악 이야기';
+      return;
+    }
 
-    while (memoryNotes.length > _maxNotes) {
-      memoryNotes.removeAt(0);
+    if (_containsAny(text, ['팬미팅', '생일', '100일'])) {
+      _mainTopic = '팬 이벤트/기념일 준비';
     }
   }
 
+  void _updateEmotion(String text) {
+    if (_containsAny(text, ['힘들', '지쳤', '멘탈', '위축'])) {
+      _emotionalTone = '힘듦/위축';
+      return;
+    }
+
+    if (_containsAny(text, ['피곤', '졸려'])) {
+      _emotionalTone = '피곤함';
+      return;
+    }
+
+    if (_containsAny(text, ['속상', '외롭', '서운'])) {
+      _emotionalTone = '속상함/외로움';
+      return;
+    }
+
+    if (_containsAny(text, ['고민', '걱정', '불안', '신경'])) {
+      _emotionalTone ??= '걱정/고민';
+    }
+  }
+
+  void _updateConcern(String text) {
+    if (_isClassTomorrowWorry(text)) {
+      _unresolvedConcern = '내일 수업에서도 학생들이 조용할까 봐 걱정함';
+      return;
+    }
+
+    if (_hasClassTopic && _containsAny(text, ['조용', '반응', '망한'])) {
+      _unresolvedConcern = '학생들이 조용해서 수업이 잘 안 된 것처럼 느껴짐';
+      return;
+    }
+
+    if (_hasClassTopic && _containsAny(text, ['걱정', '신경', '불안'])) {
+      _unresolvedConcern = '수업/학생 반응이 계속 신경 쓰임';
+      return;
+    }
+
+    if (_hasMusicTopic && _containsAny(text, ['고민', '어떻게', '컨셉'])) {
+      _unresolvedConcern = '작업이나 앨범 방향을 팬들과 정리하고 싶어 함';
+      return;
+    }
+
+    if (_isVagueFollowUpWorry(text)) {
+      _unresolvedConcern = _mainTopic == null
+          ? '앞서 말한 일 때문에 계속 신경 쓰이고 걱정함'
+          : '앞서 말한 $_mainTopic 때문에 계속 신경 쓰이고 걱정함';
+    }
+  }
+
+  void _updatePositiveTurn(String text) {
+    if (_containsAny(text, ['팬']) &&
+        _containsAny(text, ['덕분', '낫', '나아', '고마워', '감사'])) {
+      _positiveTurn = '팬들과 대화하면서 조금 나아짐';
+      return;
+    }
+
+    if (_isVagueImprovement(text)) {
+      _positiveTurn = _hasFanContext
+          ? '팬들과 대화하면서 조금 나아짐'
+          : '앞서 말한 일에 대해 그래도 조금 나아짐';
+    }
+  }
+
+  void _rememberRecentSpeech(String speech) {
+    _recentUserSpeech.remove(speech);
+    _recentUserSpeech.add(speech);
+
+    while (_recentUserSpeech.length > _maxRecentUserSpeech) {
+      _recentUserSpeech.removeAt(0);
+    }
+  }
+
+  bool get _hasClassTopic {
+    return _mainTopic != null &&
+        (_mainTopic!.contains('수업') || _mainTopic!.contains('학생'));
+  }
+
+  bool get _hasMusicTopic {
+    return _mainTopic != null &&
+        (_mainTopic!.contains('작업') ||
+            _mainTopic!.contains('앨범') ||
+            _mainTopic!.contains('음악'));
+  }
+
+  bool get _hasFanContext {
+    return _positiveTurn != null ||
+        _recentUserSpeech.any((speech) => speech.contains('팬'));
+  }
+
   bool _isClassTomorrowWorry(String text) {
-    return _containsAny(text, ['내일']) &&
-        _containsAny(text, ['걱정', '신경']) &&
-        _hasMemoryAbout(['수업', '학생', '강의']);
+    return _hasClassTopic &&
+        _containsAny(text, ['내일']) &&
+        _containsAny(text, ['걱정', '신경', '불안']);
   }
 
   bool _isVagueFollowUpWorry(String text) {
-    return _containsAny(text, ['그게', '그거', '내일', '계속', '아직']) &&
+    return _containsAny(text, ['그게', '그거', '그 일', '내일', '계속', '아직']) &&
         _containsAny(text, ['걱정', '신경', '불안']);
   }
 
@@ -115,18 +192,27 @@ class LiveSessionMemoryService {
         _containsAny(text, ['낫', '나아', '괜찮']);
   }
 
-  bool _hasMemoryAbout(List<String> keywords) {
-    return memoryNotes.any(
-      (note) => keywords.any(note.contains),
-    );
+  bool _isMeaningfulSpeech(String text) {
+    if (text.length <= 2) return false;
+    return !_containsAnyOnly(text, ['ㅋ', 'ㅎ', 'ㅠ', 'ㅜ', 'ㅇ']);
   }
 
   bool _containsAny(String text, List<String> triggers) {
     return triggers.any(text.contains);
   }
 
+  bool _containsAnyOnly(String text, List<String> characters) {
+    final compactText = text.replaceAll(RegExp(r'\s+'), '');
+
+    if (compactText.isEmpty) return false;
+
+    return compactText.runes.every(
+      (rune) => characters.contains(String.fromCharCode(rune)),
+    );
+  }
+
   String _shorten(String text) {
-    const maxLength = 60;
+    const maxLength = 80;
     if (text.length <= maxLength) return text;
     return '${text.substring(0, maxLength)}...';
   }
