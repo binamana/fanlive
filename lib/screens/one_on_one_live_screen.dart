@@ -101,13 +101,17 @@ class _OneOnOneLiveScreenState extends State<OneOnOneLiveScreen> {
       comments.remove(_typingComment);
     });
 
-    await Future.delayed(oneOnOneResponseDelay(text));
+    final responseComments = selectedFanComments(reaction.comments);
 
-    if (!mounted || responseVersion != _responseVersion) return;
+    for (var index = 0; index < responseComments.length; index += 1) {
+      await Future.delayed(oneOnOneResponseDelay(text, index));
 
-    setState(() {
-      comments.add(selectedFanComment(reaction.comments));
-    });
+      if (!mounted || responseVersion != _responseVersion) return;
+
+      setState(() {
+        comments.add(responseComments[index]);
+      });
+    }
 
     messageFocusNode.requestFocus();
   }
@@ -123,25 +127,30 @@ class _OneOnOneLiveScreenState extends State<OneOnOneLiveScreen> {
     return chatContext.sublist(startIndex);
   }
 
-  String selectedFanComment(List<String> responseComments) {
+  List<String> selectedFanComments(List<String> responseComments) {
     final fanPrefix = '${widget.fanProfile.name}:';
+    final selectedComments = <String>[];
 
     for (final comment in responseComments) {
       if (comment.trimLeft().startsWith(fanPrefix)) {
-        return comment;
+        selectedComments.add(comment);
       }
     }
 
-    if (responseComments.isEmpty) {
-      return '$fanPrefix 지금 천천히 듣고 있어요.';
+    if (selectedComments.isNotEmpty) {
+      return selectedComments;
     }
 
-    final responseText = responseComments.first.replaceFirst(
-      RegExp(r'^[^:]+:\s*'),
-      '',
-    );
+    if (responseComments.isNotEmpty) {
+      final responseText = responseComments.first.replaceFirst(
+        RegExp(r'^[^:]+:\s*'),
+        '',
+      );
 
-    return '$fanPrefix $responseText';
+      return ['$fanPrefix $responseText'];
+    }
+
+    return ['$fanPrefix 지금 천천히 듣고 있어요.'];
   }
 
   Future<void> endOneOnOneLive() async {
@@ -191,13 +200,17 @@ class _OneOnOneLiveScreenState extends State<OneOnOneLiveScreen> {
     Navigator.pop(context);
   }
 
-  Duration oneOnOneResponseDelay(String text) {
+  Duration oneOnOneResponseDelay(String text, int index) {
     final seed = text.codeUnits.fold<int>(
       widget.fanProfile.name.codeUnits.fold<int>(0, (sum, code) => sum + code),
       (sum, code) => sum + code,
     );
 
-    return Duration(milliseconds: 450 + seed % 451);
+    if (index == 0) {
+      return Duration(milliseconds: 450 + seed % 451);
+    }
+
+    return Duration(milliseconds: 650 + (seed + index * 97) % 551);
   }
 
   String initialFanMessage() {

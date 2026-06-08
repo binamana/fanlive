@@ -79,6 +79,10 @@ class AiFanResponse {
       throw const FormatException('Invalid AI fan response shape.');
     }
 
+    if (rawComments.isEmpty || rawComments.length > 3) {
+      throw const FormatException('Invalid AI fan comment count.');
+    }
+
     final comments = <String>[];
     for (final comment in rawComments) {
       if (comment is! String) {

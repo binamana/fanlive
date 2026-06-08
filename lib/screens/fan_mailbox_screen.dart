@@ -57,6 +57,31 @@ class FanMailboxScreen extends StatelessWidget {
     return fanName == '별밤' ? '$fanName과' : '$fanName와';
   }
 
+  String coreFanLabel(String fanName) {
+    switch (fanName) {
+      case '하루':
+        return '다정한 오래된 팬';
+      case '별밤':
+        return '현실적인 조언 팬';
+      case '민트':
+        return '장난 많은 리액션 팬';
+      default:
+        return '코어 팬';
+    }
+  }
+
+  String favoriteThemeSummary(CoreFanProfile profile) {
+    if (profile.favoriteThemes.isEmpty) {
+      return '아직 없음';
+    }
+
+    if (profile.favoriteThemes.length <= 2) {
+      return profile.favoriteThemes.join(', ');
+    }
+
+    return '${profile.favoriteThemes.take(2).join(', ')} 외 ${profile.favoriteThemes.length - 2}개';
+  }
+
   @override
   Widget build(BuildContext context) {
     return FanLiveBackground(
@@ -76,38 +101,96 @@ class FanMailboxScreen extends StatelessWidget {
                 style: const TextStyle(color: Colors.white70),
               ),
               const SizedBox(height: 16),
-              GlassCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '팬 호감도',
-                      style: TextStyle(color: Colors.white54),
-                    ),
-                    const SizedBox(height: 10),
-                    for (final profile in globalCoreFanProfiles) ...[
-                      Text(
-                        '${profile.name} ❤️ ${fanAffection[profile.name] ?? profile.affection} · 기분: ${profile.mood} · 서운함: ${profile.neglect}',
-                      ),
-                      const SizedBox(height: 6),
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton(
-                          onPressed: () {
-                            startOneOnOneLive(
-                              context,
-                              profile,
-                              fanAffection[profile.name] ?? profile.affection,
-                            );
-                          },
-                          child: Text(
-                            '${fanNameWithParticle(profile.name)} 1:1 라방',
+              const Text(
+                '팬 관계',
+                style: TextStyle(color: Colors.white54),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 330,
+                child: ListView.separated(
+                  itemCount: globalCoreFanProfiles.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final profile = globalCoreFanProfiles[index];
+                    final affection =
+                        fanAffection[profile.name] ?? profile.affection;
+                    final remainingAffection = 20 - affection;
+                    final isUnlocked = affection >= 20;
+
+                    return GlassCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  profile.name,
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                coreFanLabel(profile.name),
+                                style: const TextStyle(color: Colors.white60),
+                              ),
+                            ],
                           ),
-                        ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '호감도 $affection · 기분 ${profile.mood} · 서운함 ${profile.neglect}',
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            '좋아하는 라방: ${favoriteThemeSummary(profile)}',
+                            style: const TextStyle(color: Colors.white60),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            isUnlocked
+                                ? '1:1 라방 가능'
+                                : '1:1 라방까지 $remainingAffection 호감도 남음',
+                            style: TextStyle(
+                              color: isUnlocked
+                                  ? const Color(0xFFFF8FD2)
+                                  : Colors.white54,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: isUnlocked
+                                    ? Colors.white
+                                    : Colors.white60,
+                                side: BorderSide(
+                                  color: isUnlocked
+                                      ? const Color(0xFFFF8FD2)
+                                      : Colors.white24,
+                                ),
+                              ),
+                              onPressed: () {
+                                startOneOnOneLive(
+                                  context,
+                                  profile,
+                                  affection,
+                                );
+                              },
+                              child: Text(
+                                isUnlocked
+                                    ? '${fanNameWithParticle(profile.name)} 1:1 라방 열기'
+                                    : '${fanNameWithParticle(profile.name)} 1:1 라방',
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 12),
-                    ],
-                  ],
+                    );
+                  },
                 ),
               ),
               const SizedBox(height: 24),
