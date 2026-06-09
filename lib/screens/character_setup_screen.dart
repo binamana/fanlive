@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../app/fanlive_globals.dart'
     show globalFandomName, globalStageName, globalStyle;
 import '../main.dart' show fanButtonStyle;
-import '../services/fanlive_storage.dart' show saveCharacter;
+import '../services/save_slot_service.dart';
 import '../widgets/fan_input.dart';
 import '../widgets/fanlive_background.dart';
 import 'home_screen.dart';
@@ -29,20 +29,22 @@ class _CharacterSetupScreenState extends State<CharacterSetupScreen> {
     super.dispose();
   }
 
-  void createCharacter() {
+  Future<void> createCharacter() async {
     final stageName = stageNameController.text.trim();
     final fandomName = fandomNameController.text.trim();
 
     if (stageName.isEmpty || fandomName.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('활동명과 팬덤명을 입력해줘.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('활동명과 팬덤명을 입력해줘.')));
       return;
     }
     globalStageName = stageName;
     globalFandomName = fandomName;
     globalStyle = selectedStyle;
-    saveCharacter();
+    await SaveSlotService.persistCurrentLegacyState();
+
+    if (!mounted) return;
 
     Navigator.pushReplacement(
       context,
@@ -104,7 +106,9 @@ class _CharacterSetupScreenState extends State<CharacterSetupScreen> {
                     backgroundColor: Colors.white.withOpacity(0.08),
                     labelStyle: TextStyle(
                       color: selected ? Colors.white : Colors.white70,
-                      fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                      fontWeight: selected
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                     ),
                     onSelected: (_) {
                       setState(() {

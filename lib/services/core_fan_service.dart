@@ -11,26 +11,27 @@ class CoreFanService {
         affection: 0,
         mood: 'calm',
         neglect: 0,
-        favoriteThemes: const [
-          '새벽 감성 방송',
-          '새벽 고민 상담',
-          '100일 기념 방송',
-        ],
+        favoriteThemes: const ['새벽 감성 방송', '새벽 고민 상담', '100일 기념 방송'],
         dislikedThemes: const [],
+        companionType: '감정형 AI 펫',
+        currentActivity: '창가에서 조용히 기다리는 중',
+        energy: 60,
+        curiosity: 45,
+        stress: 20,
       ),
       CoreFanProfile(
         name: '별밤',
-        personality:
-            'calm, realistic, grounded, sometimes gentle fact-check',
+        personality: 'calm, realistic, grounded, sometimes gentle fact-check',
         affection: 0,
         mood: 'calm',
         neglect: 0,
-        favoriteThemes: const [
-          '작업실 비하인드',
-          '앨범 발매 전 라방',
-          '컴백 직전 방송',
-        ],
+        favoriteThemes: const ['작업실 비하인드', '앨범 발매 전 라방', '컴백 직전 방송'],
         dislikedThemes: const [],
+        companionType: '분석형 AI 펫',
+        currentActivity: '책상에서 오늘의 대화 메모 정리 중',
+        energy: 55,
+        curiosity: 70,
+        stress: 15,
       ),
       CoreFanProfile(
         name: '민트',
@@ -38,12 +39,13 @@ class CoreFanService {
         affection: 0,
         mood: 'calm',
         neglect: 0,
-        favoriteThemes: const [
-          '팬 수다 방송',
-          '생일 기념 라방',
-          '팬미팅 전야제',
-        ],
+        favoriteThemes: const ['팬 수다 방송', '생일 기념 라방', '팬미팅 전야제'],
         dislikedThemes: const [],
+        companionType: '장난형 AI 펫',
+        currentActivity: '소파 위에서 뒹굴며 장난칠 기회 찾는 중',
+        energy: 80,
+        curiosity: 75,
+        stress: 10,
       ),
     ];
   }
@@ -133,7 +135,8 @@ class CoreFanService {
     }
 
     final wasDistant =
-        previousMood == 'hurt' || (previousNeglect != null && previousNeglect >= 3);
+        previousMood == 'hurt' ||
+        (previousNeglect != null && previousNeglect >= 3);
 
     if (wasDistant) {
       return _oneOnOneCloserAgainMessage(profile.name);
@@ -211,6 +214,17 @@ class CoreFanService {
   static void _clampProfile(CoreFanProfile profile) {
     profile.affection = _clampNonNegative(profile.affection);
     profile.neglect = _clampNonNegative(profile.neglect);
+    profile.energy = _clampPercent(profile.energy);
+    profile.curiosity = _clampPercent(profile.curiosity);
+    profile.stress = _clampPercent(profile.stress);
+
+    if (profile.companionType.isEmpty) {
+      profile.companionType = 'AI 동거 친구';
+    }
+
+    if (profile.currentActivity.isEmpty) {
+      profile.currentActivity = '방 안에서 천천히 적응하는 중';
+    }
 
     if (!CoreFanProfile.allowedMoods.contains(profile.mood)) {
       profile.mood = 'calm';
@@ -219,6 +233,12 @@ class CoreFanService {
 
   static int _clampNonNegative(int value) {
     return value < 0 ? 0 : value;
+  }
+
+  static int _clampPercent(int value) {
+    if (value < 0) return 0;
+    if (value > 100) return 100;
+    return value;
   }
 
   static String _favoriteThemeEvent(String name) {

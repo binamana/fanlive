@@ -15,8 +15,8 @@ Future<void> saveFanState() async {
 
 Future<void> loadFanState() async {
   final prefs = await SharedPreferences.getInstance();
-  app.globalFanCount = prefs.getInt('fanCount') ?? 124;
-  app.globalLevel = prefs.getInt('level') ?? 1;
+  app.globalFanCount = prefs.getInt('fanCount') ?? app.defaultFanCount;
+  app.globalLevel = prefs.getInt('level') ?? app.defaultLevel;
 }
 
 Future<void> saveBroadcastRecords() async {
@@ -87,9 +87,7 @@ Future<void> loadCoreFanProfiles() async {
 
       if (decodedProfile is Map) {
         loadedProfiles.add(
-          CoreFanProfile.fromJson(
-            Map<String, dynamic>.from(decodedProfile),
-          ),
+          CoreFanProfile.fromJson(Map<String, dynamic>.from(decodedProfile)),
         );
       }
     }
@@ -148,6 +146,14 @@ Future<void> saveCharacter() async {
   if (app.globalStyle != null) {
     await prefs.setString('style', app.globalStyle!);
   }
+}
+
+Future<void> clearCharacter() async {
+  final prefs = await SharedPreferences.getInstance();
+
+  await prefs.remove('stageName');
+  await prefs.remove('fandomName');
+  await prefs.remove('style');
 }
 
 Future<void> loadCharacter() async {

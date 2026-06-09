@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'app/fanlive_globals.dart';
-import 'screens/character_setup_screen.dart';
-import 'screens/home_screen.dart';
+import 'screens/main_menu_screen.dart';
 import 'services/fanlive_storage.dart';
+import 'services/save_slot_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,6 +12,7 @@ void main() async {
   await loadFanAffection();
   await loadCoreFanProfiles();
   await loadCharacter();
+  await SaveSlotService.migrateLegacyCurrentDataToFirstSlotIfNeeded();
   runApp(const FanLiveApp());
 }
 
@@ -30,13 +31,7 @@ class FanLiveApp extends StatelessWidget {
       title: 'FANLIVE',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark(),
-      home: hasCharacter()
-          ? HomeScreen(
-              stageName: globalStageName!,
-              fandomName: globalFandomName!,
-              style: globalStyle!,
-            )
-          : const CharacterSetupScreen(),
+      home: const MainMenuScreen(),
     );
   }
 }
@@ -48,5 +43,3 @@ ButtonStyle fanButtonStyle() {
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
   );
 }
-
-
