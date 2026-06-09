@@ -30,13 +30,13 @@ class MainMenuScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               const Text(
-                'AI 찐팬들과 함께하는 가상 라방 시뮬레이터',
+                '세 명의 사이버 동거인과 사는 AI 룸 라이프',
                 style: TextStyle(color: Colors.white70, fontSize: 16),
               ),
               const SizedBox(height: 28),
               const GlassCard(
                 child: Text(
-                  '새로 시작하면 활동명과 팬덤명을 만들어요.\n이어하기는 저장된 슬롯을 불러옵니다.',
+                  '새로 시작하면 내 방과 동거인 관계를 준비해요.\n이어하기는 저장된 사이버 방을 불러옵니다.',
                   style: TextStyle(color: Colors.white70, height: 1.4),
                 ),
               ),

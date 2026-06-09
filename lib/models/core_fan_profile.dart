@@ -119,11 +119,11 @@ class CoreFanProfile {
   static String _defaultCompanionType(String name) {
     switch (name) {
       case '하루':
-        return '감정형 AI 펫';
+        return '의존적이고 착한 사이버 동거인';
       case '별밤':
-        return '분석형 AI 펫';
+        return '시니컬한 츤데레 동거인';
       case '민트':
-        return '장난형 AI 펫';
+        return '말썽쟁이 장난꾸러기 동거인';
       default:
         return 'AI 동거 친구';
     }
@@ -132,11 +132,11 @@ class CoreFanProfile {
   static String _defaultActivity(String name) {
     switch (name) {
       case '하루':
-        return '창가에서 조용히 기다리는 중';
+        return '문소리가 날 때마다 조용히 돌아보는 중';
       case '별밤':
-        return '책상에서 오늘의 대화 메모 정리 중';
+        return '책상 끝에서 방 상태를 시니컬하게 관찰하는 중';
       case '민트':
-        return '소파 위에서 뒹굴며 장난칠 기회 찾는 중';
+        return '소파 밑에 뭔가 숨기고 모른 척하는 중';
       default:
         return '방 안에서 천천히 적응하는 중';
     }

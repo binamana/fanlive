@@ -237,6 +237,10 @@ class AiFanService {
       );
     }
 
+    if (request.conversationMode == 'room_chat') {
+      return _roomChatFallback(request);
+    }
+
     return FanReactionEngine.reactToSpeech(
       text: request.text,
       stageName: request.stageName,
@@ -248,7 +252,69 @@ class AiFanService {
   static String _conversationModeValue(String? value) {
     final mode = value?.trim();
 
-    return mode == 'one_on_one' ? 'one_on_one' : 'group_live';
+    if (mode == 'one_on_one' || mode == 'room_chat') {
+      return mode!;
+    }
+
+    return 'group_live';
+  }
+
+  static FanReactionResult _roomChatFallback(AiFanRequest request) {
+    return FanReactionResult(
+      comments: _roomChatComments(request),
+      viewerDelta: 0,
+      heartDelta: 0,
+    );
+  }
+
+  static List<String> _roomChatComments(AiFanRequest request) {
+    final text = request.text;
+
+    if (_containsAny(text, ['안녕', '하이'])) {
+      return [
+        '하루: 왔어요? 아까부터 발소리 들릴 때마다 기다렸어요.',
+        '별밤: 이제야 오네요. 방은 생각보다 멀쩡해요, 아직은.',
+        '민트: 등장 효과음 틀어야 하는 거 아님?ㅋㅋ',
+      ];
+    }
+
+    if (_containsAny(text, ['힘들', '피곤', '속상', '외로', '고민'])) {
+      return [
+        '하루: 그런 상태면 혼자 방에 가만히 있지 말고 저한테 기대도 돼요.',
+        '별밤: 일단 오늘 할 일 하나는 버려요. 전부 끌고 가면 더 망가져요.',
+        '민트: 쿠션 자리 비워놨어요. 눕고 나서 욕 한 번 하자ㅋㅋ',
+      ];
+    }
+
+    if (_containsAny(text, ['고마워', '감사'])) {
+      return [
+        '하루: 그런 말 들으면 안심돼요. 오늘도 여기 있어도 되는 거죠?',
+        '별밤: 고맙다는 말은 접수. 대신 내일 무리하면 잔소리합니다.',
+        '민트: 감사 인사 받았으니 간식 청구권 생김ㅋㅋ',
+      ];
+    }
+
+    if (_containsAny(text, ['어떻게', '생각', '할까', '아이디어', '추천'])) {
+      return [
+        '별밤: 선택지를 두 개로 줄여요. 지금은 큰 결론보다 바로 할 수 있는 쪽이 나아요.',
+        '하루: 마음이 덜 다치는 쪽을 골라도 괜찮아요. 꼭 완벽하지 않아도 돼요.',
+        '민트: 일단 쉬운 버전으로 테스트 ㄱㄱ. 망하면 내가 방해한 걸로 하죠ㅋㅋ',
+      ];
+    }
+
+    if (_containsAny(text, ['잘자', '갈게', '나중', '종료'])) {
+      return [
+        '하루: 벌써 가요? 그래도 쉬어야 하니까... 내일 또 말 걸어줘요.',
+        '별밤: 불 끄고 폰 내려놓기. 이건 잔소리 아니라 생존 팁이에요.',
+        '민트: 잘자요. 내가 몰래 방 정리할 확률은 낮음ㅋㅋ',
+      ];
+    }
+
+    return [
+      '하루: 방금 말투가 조금 신경 쓰였어요. 괜찮은 거 맞아요?',
+      '별밤: 그 얘기는 그냥 넘기기엔 정보가 부족해요. 한 줄만 더 말해봐요.',
+      '민트: 오케이, 사이버 거실 회의 안건 접수ㅋㅋ',
+    ];
   }
 
   static String _oneOnOneFallbackComment(AiFanRequest request) {
@@ -304,6 +370,12 @@ class AiFanService {
     '팬미팅',
     '오늘',
     '요즘',
+    '방',
+    '동거',
+    '외로',
+    '정리',
+    '청소',
+    '잠',
   ];
 
   static bool _isOnlySimpleReaction(String text) {

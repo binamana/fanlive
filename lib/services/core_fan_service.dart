@@ -7,42 +7,45 @@ class CoreFanService {
     return [
       CoreFanProfile(
         name: '하루',
-        personality: 'caring, emotional, slightly worried, long-time fan',
+        personality:
+            'gentle, attached, emotionally dependent, easily lonely, very caring cyber roommate',
         affection: 0,
         mood: 'calm',
         neglect: 0,
         favoriteThemes: const ['새벽 감성 방송', '새벽 고민 상담', '100일 기념 방송'],
         dislikedThemes: const [],
-        companionType: '감정형 AI 펫',
-        currentActivity: '창가에서 조용히 기다리는 중',
+        companionType: '의존적이고 착한 사이버 동거인',
+        currentActivity: '문소리가 날 때마다 조용히 돌아보는 중',
         energy: 60,
         curiosity: 45,
         stress: 20,
       ),
       CoreFanProfile(
         name: '별밤',
-        personality: 'calm, realistic, grounded, sometimes gentle fact-check',
+        personality:
+            'dry, realistic, sarcastic, secretly caring, observant cyber roommate',
         affection: 0,
         mood: 'calm',
         neglect: 0,
         favoriteThemes: const ['작업실 비하인드', '앨범 발매 전 라방', '컴백 직전 방송'],
         dislikedThemes: const [],
-        companionType: '분석형 AI 펫',
-        currentActivity: '책상에서 오늘의 대화 메모 정리 중',
+        companionType: '시니컬한 츤데레 동거인',
+        currentActivity: '책상 끝에서 방 상태를 시니컬하게 관찰하는 중',
         energy: 55,
         curiosity: 70,
         stress: 15,
       ),
       CoreFanProfile(
         name: '민트',
-        personality: 'playful, quick chat style, meme/heart energy',
+        personality:
+            'chaotic, playful, impulsive, messy, energetic cyber roommate',
         affection: 0,
         mood: 'calm',
         neglect: 0,
         favoriteThemes: const ['팬 수다 방송', '생일 기념 라방', '팬미팅 전야제'],
         dislikedThemes: const [],
-        companionType: '장난형 AI 펫',
-        currentActivity: '소파 위에서 뒹굴며 장난칠 기회 찾는 중',
+        companionType: '말썽쟁이 장난꾸러기 동거인',
+        currentActivity: '소파 밑에 뭔가 숨기고 모른 척하는 중',
         energy: 80,
         curiosity: 75,
         stress: 10,
@@ -98,7 +101,7 @@ class CoreFanService {
       if (profile.favoriteThemes.contains(themeTitle)) {
         events.add(_favoriteThemeEvent(profile.name));
       } else if (profile.dislikedThemes.contains(themeTitle)) {
-        events.add('${profile.name}이 오늘 방송에서는 조금 서운했던 것 같아요. 서운함 +1');
+        events.add('${profile.name}이 오늘은 방 한쪽에서 조금 서운해했어요. 서운함 +1');
       }
     }
 
@@ -144,13 +147,13 @@ class CoreFanService {
 
     switch (profile.name) {
       case '하루':
-        return '하루: 오늘 1:1로 얘기해줘서 마음이 조금 놓였어요.';
+        return '하루: 오늘 둘이 얘기해줘서 마음이 조금 놓였어요.';
       case '별밤':
-        return '별밤: 오늘 1:1 대화는 꽤 의미 있었어요. 다음엔 더 구체적으로 얘기해봐도 좋겠어요.';
+        return '별밤: 오늘 대화는 꽤 의미 있었어요. 다음엔 더 구체적으로 얘기해봐도 좋겠어요.';
       case '민트':
-        return '민트: 1:1 라방 재밌었음ㅋㅋ 다음에도 불러줘요 💖';
+        return '민트: 둘이 떠드는 거 재밌었음ㅋㅋ 다음에도 불러줘요 💖';
       default:
-        return '${profile.name}: 오늘 1:1로 얘기해줘서 고마워요.';
+        return '${profile.name}: 오늘 둘이 얘기해줘서 고마워요.';
     }
   }
 
@@ -220,6 +223,8 @@ class CoreFanService {
 
     if (profile.companionType.isEmpty) {
       profile.companionType = 'AI 동거 친구';
+    } else if (profile.companionType.contains('AI 펫')) {
+      profile.companionType = _defaultCompanionType(profile.name);
     }
 
     if (profile.currentActivity.isEmpty) {
@@ -244,39 +249,52 @@ class CoreFanService {
   static String _favoriteThemeEvent(String name) {
     switch (name) {
       case '하루':
-        return '하루가 오늘 방송에 더 가까워진 것 같아요. ❤️ +2';
+        return '하루가 오늘 조금 더 안심한 것 같아요. 친밀도 +2';
       case '별밤':
-        return '별밤이 오늘 방송을 더 믿고 지켜보게 된 것 같아요. ❤️ +2';
+        return '별밤이 오늘은 괜히 덜 툴툴댄 것 같아요. 친밀도 +2';
       case '민트':
-        return '민트가 오늘 방송에 더 신난 것 같아요. ❤️ +2';
+        return '민트가 오늘 방 안을 더 신나게 어질렀어요. 친밀도 +2';
       default:
-        return '$name이 오늘 방송에 더 가까워진 것 같아요. ❤️ +2';
+        return '$name이 오늘 조금 더 가까워진 것 같아요. 친밀도 +2';
     }
   }
 
   static String _neutralThemeEvent(CoreFanProfile profile) {
     switch (profile.name) {
       case '하루':
-        return '하루는 오늘 방송을 조용히 오래 지켜봤어요.';
+        return '하루는 오늘 문 쪽을 자주 바라봤어요.';
       case '별밤':
-        return '별밤은 오늘 방송을 차분하게 지켜봤어요.';
+        return '별밤은 오늘 방 상태를 조용히 체크했어요.';
       case '민트':
-        return '민트가 다음 팬 수다 방송을 기다리고 있어요.';
+        return '민트가 다음 장난칠 타이밍을 기다리고 있어요.';
       default:
-        return '${profile.name}이 오늘 방송을 지켜봤어요.';
+        return '${profile.name}이 오늘 방에서 조용히 지냈어요.';
     }
   }
 
   static String _oneOnOneCloserAgainMessage(String name) {
     switch (name) {
       case '하루':
-        return '하루: 오늘 1:1로 얘기하니까 다시 조금 가까워진 것 같아서 마음이 놓였어요.';
+        return '하루: 오늘 둘이 얘기하니까 다시 조금 가까워진 것 같아서 마음이 놓였어요.';
       case '별밤':
         return '별밤: 오늘 대화로 거리가 조금 줄어든 느낌이에요. 다음엔 더 편하게 얘기해봐요.';
       case '민트':
-        return '민트: 오늘 1:1로 다시 가까워진 느낌ㅋㅋ 다음에도 불러줘요 💖';
+        return '민트: 오늘 다시 가까워진 느낌ㅋㅋ 다음에도 방에서 같이 놀아요 💖';
       default:
-        return '$name: 오늘 1:1로 다시 조금 가까워진 것 같아요.';
+        return '$name: 오늘 다시 조금 가까워진 것 같아요.';
+    }
+  }
+
+  static String _defaultCompanionType(String name) {
+    switch (name) {
+      case '하루':
+        return '의존적이고 착한 사이버 동거인';
+      case '별밤':
+        return '시니컬한 츤데레 동거인';
+      case '민트':
+        return '말썽쟁이 장난꾸러기 동거인';
+      default:
+        return 'AI 동거 친구';
     }
   }
 

@@ -72,7 +72,7 @@ class PixelPetCard extends StatelessWidget {
               runSpacing: 6,
               children: [
                 _MiniStat(label: '기분', value: profile.mood),
-                _MiniStat(label: '호감', value: '${profile.affection}'),
+                _MiniStat(label: '친밀', value: '${profile.affection}'),
                 _MiniStat(label: '에너지', value: '${profile.energy}'),
               ],
             ),
