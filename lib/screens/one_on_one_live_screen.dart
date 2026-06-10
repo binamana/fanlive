@@ -31,7 +31,7 @@ class OneOnOneLiveScreen extends StatefulWidget {
 }
 
 class _OneOnOneLiveScreenState extends State<OneOnOneLiveScreen> {
-  static const _typingComment = '팬이 입력 중...';
+  static const _typingComment = '생각중';
 
   final messageController = TextEditingController();
   final messageFocusNode = FocusNode();
@@ -102,8 +102,8 @@ class _OneOnOneLiveScreenState extends State<OneOnOneLiveScreen> {
       text: text,
       stageName: widget.stageName,
       fandomName: widget.fandomName,
-      themeTitle: '1:1 라방',
-      customConcept: '${fanNameWithParticle(widget.fanProfile.name)} 1:1 라방',
+      themeTitle: '1:1 방 대화',
+      customConcept: '${fanNameWithParticle(widget.fanProfile.name)} 1:1 방 대화',
       recentComments: recentComments,
       fanAffection: {widget.fanProfile.name: widget.fanProfile.affection},
       conversationMode: 'one_on_one',
@@ -288,9 +288,9 @@ class _OneOnOneLiveScreenState extends State<OneOnOneLiveScreen> {
   }
 
   void showSpeechUnavailableMessage() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('음성 인식을 사용할 수 없어요.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('음성 인식을 사용할 수 없어요.')));
   }
 
   List<String> latestComments(int count) {
@@ -339,7 +339,8 @@ class _OneOnOneLiveScreenState extends State<OneOnOneLiveScreen> {
     _responseVersion += 1;
 
     if (_userMessageCount > 0 && _lastUserMessage != null) {
-      final profile = CoreFanService.findByName(
+      final profile =
+          CoreFanService.findByName(
             globalCoreFanProfiles,
             widget.fanProfile.name,
           ) ??
@@ -397,7 +398,7 @@ class _OneOnOneLiveScreenState extends State<OneOnOneLiveScreen> {
       case '별밤':
         return '1:1이면 조금 더 솔직하게 얘기해도 괜찮을 것 같아요.';
       case '민트':
-        return '오 1:1 라방 입장 완료ㅋㅋ 오늘 뭐부터 얘기할까요? 💖';
+        return '오 1:1 방 대화 시작ㅋㅋ 오늘 뭐부터 얘기할까요?';
       default:
         return '오늘은 둘이서 얘기해요.';
     }
@@ -417,7 +418,7 @@ class _OneOnOneLiveScreenState extends State<OneOnOneLiveScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '${fanNameWithParticle(widget.fanProfile.name)} 1:1 라방',
+                '${fanNameWithParticle(widget.fanProfile.name)} 1:1 방 대화',
                 style: const TextStyle(
                   fontSize: 30,
                   fontWeight: FontWeight.bold,
@@ -426,7 +427,7 @@ class _OneOnOneLiveScreenState extends State<OneOnOneLiveScreen> {
               const SizedBox(height: 12),
               GlassCard(
                 child: Text(
-                  '기분: ${widget.fanProfile.mood} · 호감도: ${widget.fanProfile.affection} · 서운함: ${widget.fanProfile.neglect}',
+                  '기분: ${widget.fanProfile.mood} · 친밀도: ${widget.fanProfile.affection} · 서운함: ${widget.fanProfile.neglect}',
                 ),
               ),
               const SizedBox(height: 16),
@@ -439,9 +440,7 @@ class _OneOnOneLiveScreenState extends State<OneOnOneLiveScreen> {
 
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 10),
-                      child: GlassCard(
-                        child: Text(comment),
-                      ),
+                      child: GlassCard(child: Text(comment)),
                     );
                   },
                 ),

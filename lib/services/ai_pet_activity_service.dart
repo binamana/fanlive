@@ -7,6 +7,7 @@ class AiPetActivityService {
     List<CoreFanProfile> profiles,
   ) {
     for (final profile in profiles) {
+      if (!profile.isAdopted) continue;
       profile.currentActivity = getActivityForProfile(profile);
     }
 
@@ -14,6 +15,10 @@ class AiPetActivityService {
   }
 
   static String getActivityForProfile(CoreFanProfile profile) {
+    if (!profile.isAdopted) {
+      return '나중에 새 룸펫을 입양할 수 있어요.';
+    }
+
     if (profile.neglect >= 5) {
       return '방 한쪽에서 혼자 조용히 충전하는 중';
     }

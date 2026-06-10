@@ -8,49 +8,155 @@ class CoreFanService {
       CoreFanProfile(
         name: '하루',
         personality:
-            'gentle, attached, emotionally dependent, easily lonely, very caring cyber roommate',
+            'clingy, gentle, emotionally attached, lonely little room-pet',
         affection: 0,
         mood: 'calm',
         neglect: 0,
         favoriteThemes: const ['새벽 감성 방송', '새벽 고민 상담', '100일 기념 방송'],
         dislikedThemes: const [],
-        companionType: '의존적이고 착한 사이버 동거인',
+        companionType: '기다림이 많은 다정한 룸펫',
         currentActivity: '문소리가 날 때마다 조용히 돌아보는 중',
         energy: 60,
         curiosity: 45,
         stress: 20,
+        appearanceType: '둥근 픽셀 생명체',
+        imageAssetPath: imageAssetPathForAppearance('둥근 픽셀 생명체'),
+        isAdopted: true,
       ),
       CoreFanProfile(
         name: '별밤',
-        personality:
-            'dry, realistic, sarcastic, secretly caring, observant cyber roommate',
+        personality: 'dry, cynical, blunt, secretly caring room-pet',
         affection: 0,
         mood: 'calm',
         neglect: 0,
         favoriteThemes: const ['작업실 비하인드', '앨범 발매 전 라방', '컴백 직전 방송'],
         dislikedThemes: const [],
-        companionType: '시니컬한 츤데레 동거인',
+        companionType: '툴툴대는 츤데레 룸펫',
         currentActivity: '책상 끝에서 방 상태를 시니컬하게 관찰하는 중',
         energy: 55,
         curiosity: 70,
         stress: 15,
+        appearanceType: '로봇형 미니 친구',
+        isAdopted: true,
       ),
       CoreFanProfile(
         name: '민트',
-        personality:
-            'chaotic, playful, impulsive, messy, energetic cyber roommate',
+        personality: 'playful, chaotic, mischievous, loud little room-pet',
         affection: 0,
         mood: 'calm',
         neglect: 0,
         favoriteThemes: const ['팬 수다 방송', '생일 기념 라방', '팬미팅 전야제'],
         dislikedThemes: const [],
-        companionType: '말썽쟁이 장난꾸러기 동거인',
+        companionType: '말썽 많은 장난꾸러기 룸펫',
         currentActivity: '소파 밑에 뭔가 숨기고 모른 척하는 중',
         energy: 80,
         curiosity: 75,
         stress: 10,
+        appearanceType: '고양이형 디지털 펫',
+        isAdopted: true,
       ),
     ];
+  }
+
+  static List<CoreFanProfile> createStarterProfiles({
+    String companionName = '하루',
+    String archetype = '의존적이고 착한 타입',
+    String appearanceType = '둥근 픽셀 생명체',
+  }) {
+    return [
+      createProfileFromArchetype(
+        name: companionName.trim().isEmpty ? '하루' : companionName.trim(),
+        archetype: archetype,
+        appearanceType: appearanceType,
+        isAdopted: true,
+      ),
+      createLockedProfile(2),
+      createLockedProfile(3),
+    ];
+  }
+
+  static CoreFanProfile createProfileFromArchetype({
+    required String name,
+    required String archetype,
+    required String appearanceType,
+    required bool isAdopted,
+  }) {
+    switch (archetype) {
+      case '시니컬한 츤데레 타입':
+        return CoreFanProfile(
+          name: name,
+          personality: 'dry, cynical, blunt, secretly caring room-pet',
+          affection: 0,
+          mood: 'calm',
+          neglect: 0,
+          favoriteThemes: const ['조용한 작업실형', '새벽 감성형'],
+          dislikedThemes: const [],
+          companionType: '툴툴대는 츤데레 룸펫',
+          currentActivity: '책상 끝에서 방 상태를 시니컬하게 관찰하는 중',
+          energy: 55,
+          curiosity: 70,
+          stress: 15,
+          appearanceType: appearanceType,
+          imageAssetPath: imageAssetPathForAppearance(appearanceType),
+          isAdopted: isAdopted,
+        );
+      case '말썽쟁이 장난꾸러기 타입':
+        return CoreFanProfile(
+          name: name,
+          personality: 'playful, chaotic, mischievous, loud little room-pet',
+          affection: 0,
+          mood: 'calm',
+          neglect: 0,
+          favoriteThemes: const ['장난 많은 혼돈형', '이상한 실험실형'],
+          dislikedThemes: const [],
+          companionType: '말썽 많은 장난꾸러기 룸펫',
+          currentActivity: '소파 밑에 뭔가 숨기고 모른 척하는 중',
+          energy: 80,
+          curiosity: 75,
+          stress: 10,
+          appearanceType: appearanceType,
+          imageAssetPath: imageAssetPathForAppearance(appearanceType),
+          isAdopted: isAdopted,
+        );
+      default:
+        return CoreFanProfile(
+          name: name,
+          personality:
+              'clingy, gentle, emotionally attached, lonely little room-pet',
+          affection: 0,
+          mood: 'calm',
+          neglect: 0,
+          favoriteThemes: const ['포근한 일상형', '새벽 감성형'],
+          dislikedThemes: const [],
+          companionType: '기다림이 많은 다정한 룸펫',
+          currentActivity: '문소리가 날 때마다 조용히 돌아보는 중',
+          energy: 60,
+          curiosity: 45,
+          stress: 20,
+          appearanceType: appearanceType,
+          imageAssetPath: imageAssetPathForAppearance(appearanceType),
+          isAdopted: isAdopted,
+        );
+    }
+  }
+
+  static CoreFanProfile createLockedProfile(int slotNumber) {
+    return CoreFanProfile(
+      name: '빈 자리 $slotNumber',
+      personality: 'locked room-pet slot',
+      affection: 0,
+      mood: 'calm',
+      neglect: 0,
+      favoriteThemes: const [],
+      dislikedThemes: const [],
+      companionType: '비어 있는 룸펫 자리',
+      currentActivity: '나중에 새 룸펫을 입양할 수 있어요.',
+      energy: 0,
+      curiosity: 0,
+      stress: 0,
+      appearanceType: '빈 룸펫 자리',
+      isAdopted: false,
+    );
   }
 
   static CoreFanProfile? findByName(
@@ -71,6 +177,8 @@ class CoreFanService {
     String themeTitle,
   ) {
     for (final profile in profiles) {
+      if (!profile.isAdopted) continue;
+
       if (profile.favoriteThemes.contains(themeTitle)) {
         profile.affection = _clampNonNegative(profile.affection + 2);
         profile.mood = _improveMood(profile.mood);
@@ -94,6 +202,8 @@ class CoreFanService {
     final events = <String>[];
 
     for (final profile in profiles) {
+      if (!profile.isAdopted) continue;
+
       if (events.length >= maxMessages) {
         return events;
       }
@@ -105,8 +215,13 @@ class CoreFanService {
       }
     }
 
-    if (events.isEmpty) {
-      final profile = profiles[_stableProfileIndex(profiles, themeTitle)];
+    final adoptedProfiles = profiles
+        .where((profile) => profile.isAdopted)
+        .toList(growable: false);
+
+    if (events.isEmpty && adoptedProfiles.isNotEmpty) {
+      final profile =
+          adoptedProfiles[_stableProfileIndex(adoptedProfiles, themeTitle)];
       events.add(_neutralThemeEvent(profile));
     }
 
@@ -162,6 +277,8 @@ class CoreFanService {
     Map<String, int> fanAffection,
   ) {
     for (final profile in profiles) {
+      if (!profile.isAdopted) continue;
+
       final legacyAffection = fanAffection[profile.name];
 
       if (legacyAffection != null) {
@@ -178,6 +295,7 @@ class CoreFanService {
   ) {
     for (final profile in profiles) {
       _clampProfile(profile);
+      if (!profile.isAdopted) continue;
       fanAffection[profile.name] = profile.affection;
     }
   }
@@ -185,15 +303,18 @@ class CoreFanService {
   static List<CoreFanProfile> mergeWithDefaultProfiles(
     List<CoreFanProfile> savedProfiles,
   ) {
-    final profiles = createDefaultProfiles();
+    if (savedProfiles.isEmpty) {
+      return createDefaultProfiles();
+    }
 
-    for (var index = 0; index < profiles.length; index += 1) {
-      final savedProfile = findByName(savedProfiles, profiles[index].name);
+    final profiles = savedProfiles.take(3).toList();
 
-      if (savedProfile != null) {
-        _clampProfile(savedProfile);
-        profiles[index] = savedProfile;
-      }
+    for (final profile in profiles) {
+      _clampProfile(profile);
+    }
+
+    while (profiles.length < 3) {
+      profiles.add(createLockedProfile(profiles.length + 1));
     }
 
     return profiles;
@@ -222,14 +343,28 @@ class CoreFanService {
     profile.stress = _clampPercent(profile.stress);
 
     if (profile.companionType.isEmpty) {
-      profile.companionType = 'AI 동거 친구';
+      profile.companionType = '룸펫';
     } else if (profile.companionType.contains('AI 펫')) {
       profile.companionType = _defaultCompanionType(profile.name);
+    } else if (profile.companionType.contains('동거인') ||
+        profile.companionType.contains('사이버')) {
+      profile.companionType = _roomPetTypeForExisting(
+        profile.companionType,
+        profile.name,
+      );
     }
 
     if (profile.currentActivity.isEmpty) {
       profile.currentActivity = '방 안에서 천천히 적응하는 중';
     }
+
+    if (profile.appearanceType.isEmpty) {
+      profile.appearanceType = profile.isAdopted ? '둥근 픽셀 생명체' : '빈 룸펫 자리';
+    }
+
+    profile.imageAssetPath ??= imageAssetPathForAppearance(
+      profile.appearanceType,
+    );
 
     if (!CoreFanProfile.allowedMoods.contains(profile.mood)) {
       profile.mood = 'calm';
@@ -288,14 +423,36 @@ class CoreFanService {
   static String _defaultCompanionType(String name) {
     switch (name) {
       case '하루':
-        return '의존적이고 착한 사이버 동거인';
+        return '기다림이 많은 다정한 룸펫';
       case '별밤':
-        return '시니컬한 츤데레 동거인';
+        return '툴툴대는 츤데레 룸펫';
       case '민트':
-        return '말썽쟁이 장난꾸러기 동거인';
+        return '말썽 많은 장난꾸러기 룸펫';
       default:
-        return 'AI 동거 친구';
+        return '룸펫';
     }
+  }
+
+  static String _roomPetTypeForExisting(String existingType, String name) {
+    if (existingType.contains('시니컬') || existingType.contains('츤데레')) {
+      return '툴툴대는 츤데레 룸펫';
+    }
+
+    if (existingType.contains('말썽') || existingType.contains('장난')) {
+      return '말썽 많은 장난꾸러기 룸펫';
+    }
+
+    if (existingType.contains('의존') || existingType.contains('착한')) {
+      return '기다림이 많은 다정한 룸펫';
+    }
+
+    return _defaultCompanionType(name);
+  }
+
+  static String? imageAssetPathForAppearance(String appearanceType) {
+    return appearanceType == '둥근 픽셀 생명체'
+        ? 'assets/room_pets/starter_pet_01.png'
+        : null;
   }
 
   static int _stableProfileIndex(

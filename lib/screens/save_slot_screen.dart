@@ -193,7 +193,7 @@ class _SaveSlotCard extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              '${currentSlot.fandomName} · Lv.${currentSlot.level} · 팬 ${currentSlot.fanCount}명',
+              '${currentSlot.fandomName} · Lv.${currentSlot.level} · 생활 점수 ${currentSlot.fanCount}',
               style: const TextStyle(color: Colors.white70),
             ),
             const SizedBox(height: 4),

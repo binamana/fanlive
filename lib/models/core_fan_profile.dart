@@ -13,6 +13,9 @@ class CoreFanProfile {
   int energy;
   int curiosity;
   int stress;
+  String appearanceType;
+  String? imageAssetPath;
+  bool isAdopted;
 
   CoreFanProfile({
     required this.name,
@@ -27,13 +30,18 @@ class CoreFanProfile {
     int energy = 60,
     int curiosity = 50,
     int stress = 20,
+    String? appearanceType,
+    this.imageAssetPath,
+    bool isAdopted = true,
   }) : companionType = companionType ?? _defaultCompanionType(name),
        currentActivity = currentActivity ?? _defaultActivity(name),
        energy = _clampPercent(energy),
        curiosity = _clampPercent(curiosity),
-       stress = _clampPercent(stress);
+       stress = _clampPercent(stress),
+       appearanceType = appearanceType ?? _defaultAppearanceType(name),
+       isAdopted = isAdopted;
 
-  Map<String, Object> toJson() {
+  Map<String, Object?> toJson() {
     return {
       'name': name,
       'personality': personality,
@@ -47,6 +55,9 @@ class CoreFanProfile {
       'energy': _clampPercent(energy),
       'curiosity': _clampPercent(curiosity),
       'stress': _clampPercent(stress),
+      'appearanceType': appearanceType,
+      'imageAssetPath': imageAssetPath,
+      'isAdopted': isAdopted,
     };
   }
 
@@ -75,6 +86,12 @@ class CoreFanProfile {
         fallback: _defaultCuriosity(name),
       ),
       stress: _percentValue(json['stress'], fallback: _defaultStress(name)),
+      appearanceType: _stringValue(
+        json['appearanceType'],
+        fallback: _defaultAppearanceType(name),
+      ),
+      imageAssetPath: _nullableStringValue(json['imageAssetPath']),
+      isAdopted: _boolValue(json['isAdopted'], fallback: true),
     );
   }
 
@@ -92,6 +109,14 @@ class CoreFanProfile {
 
   static int _percentValue(Object? value, {required int fallback}) {
     return value is num ? _clampPercent(value.toInt()) : fallback;
+  }
+
+  static String? _nullableStringValue(Object? value) {
+    return value is String && value.isNotEmpty ? value : null;
+  }
+
+  static bool _boolValue(Object? value, {required bool fallback}) {
+    return value is bool ? value : fallback;
   }
 
   static String _moodValue(Object? value) {
@@ -119,13 +144,13 @@ class CoreFanProfile {
   static String _defaultCompanionType(String name) {
     switch (name) {
       case '하루':
-        return '의존적이고 착한 사이버 동거인';
+        return '기다림이 많은 다정한 룸펫';
       case '별밤':
-        return '시니컬한 츤데레 동거인';
+        return '툴툴대는 츤데레 룸펫';
       case '민트':
-        return '말썽쟁이 장난꾸러기 동거인';
+        return '말썽 많은 장난꾸러기 룸펫';
       default:
-        return 'AI 동거 친구';
+        return '룸펫';
     }
   }
 
@@ -172,6 +197,17 @@ class CoreFanProfile {
         return 10;
       default:
         return 20;
+    }
+  }
+
+  static String _defaultAppearanceType(String name) {
+    switch (name) {
+      case '별밤':
+        return '로봇형 미니 친구';
+      case '민트':
+        return '고양이형 디지털 펫';
+      default:
+        return '둥근 픽셀 생명체';
     }
   }
 }

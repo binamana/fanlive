@@ -21,7 +21,6 @@ import 'achievements_screen.dart';
 import 'fan_mailbox_screen.dart';
 import 'records_list_screen.dart';
 import 'save_slot_screen.dart';
-import 'theme_select_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final String stageName;
@@ -40,8 +39,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  static const _typingComment = '동거인들이 입력 중...';
-  static const _coreNames = ['하루', '별밤', '민트'];
+  static const _typingComment = '생각중';
 
   final roomController = TextEditingController();
   final roomFocusNode = FocusNode();
@@ -86,9 +84,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _roomResponseVersion += 1;
     final responseVersion = _roomResponseVersion;
     final recentComments = _latestRoomMessages(10);
-    final companionProfiles = AiPetActivityService.updateActivitiesForHomeView(
-      globalCoreFanProfiles,
-    );
+    final companionProfiles = _adoptedCompanions();
     final roomContext = _roomContext(companionProfiles);
 
     setState(() {
@@ -110,11 +106,12 @@ class _HomeScreenState extends State<HomeScreen> {
     final reaction = await AiFanService.reactToSpeech(
       text: text,
       stageName: widget.stageName,
-      fandomName: '동거인 하우스',
-      themeTitle: '내 사이버 방',
+      fandomName: '룸펫 하우스',
+      themeTitle: '픽셀 룸',
       customConcept:
-          '사이버 동거인 방 대화. 방송, 라방, 팬 채팅이 아니라 같은 방에 사는 AI 동거인들과 나누는 생활 대화. $roomContext',
+          '작은 픽셀 룸에서 룸펫과 나누는 생활 대화. This is not a livestream. These are room-pets, not fans, viewers, fandom, or chat audience. Use the actual room-pet name and follow its archetype strongly. Do not make cynical or mischievous types generically kind. $roomContext',
       conversationMode: 'room_chat',
+      companions: companionProfiles,
       recentComments: recentComments,
       fanAffection: fanAffection,
       sessionMemory: roomContext,
@@ -311,8 +308,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   List<String> _roomSafeReplies(List<String> replies) {
+    final companionNames = _adoptedCompanionNames();
+
     if (replies.isEmpty) {
-      return ['하루: 지금 여기서 듣고 있어요. 조금만 더 말해줘요.'];
+      return ['${companionNames.first}: 지금 여기서 듣고 있어요. 조금만 더 말해줘요.'];
     }
 
     final safeReplies = <String>[];
@@ -322,23 +321,30 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (sanitized.isEmpty) continue;
 
-      if (_coreNames.any((name) => sanitized.startsWith('$name:'))) {
+      final maxReplies = companionNames.length.clamp(1, 3);
+
+      if (safeReplies.length >= maxReplies) break;
+
+      if (companionNames.any((name) => sanitized.startsWith('$name:'))) {
         safeReplies.add(sanitized);
       } else {
-        safeReplies.add('${_coreNames[index % _coreNames.length]}: $sanitized');
+        final replyText = sanitized.replaceFirst(RegExp(r'^[^:]+:\s*'), '');
+        safeReplies.add(
+          '${companionNames[safeReplies.length % companionNames.length]}: $replyText',
+        );
       }
     }
 
     return safeReplies.isNotEmpty
         ? safeReplies
-        : ['하루: 지금 여기서 듣고 있어요. 조금만 더 말해줘요.'];
+        : ['${_adoptedCompanionNames().first}: 지금 여기서 듣고 있어요. 조금만 더 말해줘요.'];
   }
 
   String _sanitizeRoomReply(String reply) {
     return reply
-        .replaceAll('시청자', '동거인')
-        .replaceAll('팬들', '동거인들')
-        .replaceAll('팬', '동거인')
+        .replaceAll('시청자', '룸펫')
+        .replaceAll('팬들', '룸펫들')
+        .replaceAll('팬', '룸펫')
         .replaceAll('라방', '방 대화')
         .replaceAll('방송', '대화');
   }
@@ -358,7 +364,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _roomContext(List<CoreFanProfile> profiles) {
     final companionLines = profiles
         .map((profile) {
-          return '${profile.name}=성격:${profile.companionType}, 기분:${profile.mood}, 친밀도:${profile.affection}, 서운함:${profile.neglect}, 활동:${profile.currentActivity}';
+          return '${profile.name}=룸펫 성향:${profile.companionType}, 모습:${profile.appearanceType}, 기분:${profile.mood}, 친밀도:${profile.affection}, 서운함:${profile.neglect}, 활동:${profile.currentActivity}';
         })
         .join(' / ');
 
@@ -366,11 +372,37 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   List<String> _initialRoomMessages() {
-    return [
-      '하루: 오늘도 여기 있었어요. 괜찮으면 먼저 말 걸어줘요.',
-      '별밤: 방 상태는 그럭저럭입니다. 네 상태는 아직 판단 보류.',
-      '민트: 소파 점령 완료ㅋㅋ 오늘은 뭐 하고 놀까요?',
-    ];
+    final companions = _adoptedCompanions();
+
+    if (companions.isEmpty) {
+      return ['방: 아직 입주한 룸펫이 없어요.'];
+    }
+
+    return companions.map(_initialMessageFor).toList();
+  }
+
+  String _initialMessageFor(CoreFanProfile profile) {
+    if (profile.companionType.contains('시니컬')) {
+      return '${profile.name}: 방 상태는 그럭저럭입니다. 네 상태는 아직 판단 보류.';
+    }
+
+    if (profile.companionType.contains('장난')) {
+      return '${profile.name}: 소파 점령 완료ㅋㅋ 오늘은 뭐 하고 놀까요?';
+    }
+
+    return '${profile.name}: 오늘도 여기 있었어요. 괜찮으면 먼저 말 걸어줘요.';
+  }
+
+  List<CoreFanProfile> _adoptedCompanions() {
+    return globalCoreFanProfiles
+        .where((profile) => profile.isAdopted)
+        .toList(growable: false);
+  }
+
+  List<String> _adoptedCompanionNames() {
+    final names = _adoptedCompanions().map((profile) => profile.name).toList();
+
+    return names.isEmpty ? ['룸펫'] : names;
   }
 
   @override
@@ -378,6 +410,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final companionProfiles = AiPetActivityService.updateActivitiesForHomeView(
       globalCoreFanProfiles,
     );
+    final adoptedNames = _adoptedCompanionNames().join(', ');
 
     return FanLiveBackground(
       child: SafeArea(
@@ -389,7 +422,7 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 const SizedBox(height: 12),
                 const Text(
-                  '내 사이버 방',
+                  '내 픽셀 룸',
                   style: TextStyle(
                     fontSize: 38,
                     fontWeight: FontWeight.bold,
@@ -398,8 +431,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  '하루, 별밤, 민트가 오늘도 각자 멋대로 지내고 있어요.',
+                  '입주한 룸펫이 오늘도 작은 방에서 자기 방식대로 지내고 있어요.',
                   style: TextStyle(color: Colors.white70, fontSize: 15),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '현재 룸펫: $adoptedNames',
+                  style: const TextStyle(color: Colors.white54, fontSize: 13),
                 ),
                 const SizedBox(height: 22),
                 _buildRoomInfo(),
@@ -425,8 +463,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 _buildPrimaryActions(),
                 const SizedBox(height: 12),
                 _buildSecondaryActions(),
-                const SizedBox(height: 12),
-                _buildLegacyLiveButton(),
                 const SizedBox(height: 24),
               ],
             ),
@@ -470,7 +506,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '동거 생활 Lv.$globalLevel · 생활 점수 $globalFanCount',
+                  '룸펫 생활 Lv.$globalLevel · 생활 점수 $globalFanCount',
                   style: const TextStyle(color: Colors.white54),
                 ),
               ],
@@ -487,13 +523,15 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            '거실 대화',
+            '룸펫과 대화',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 6),
-          const Text(
-            '말을 걸면 세 동거인이 지금 방 분위기에 맞춰 대답해요.',
-            style: TextStyle(color: Colors.white54, fontSize: 13),
+          Text(
+            _adoptedCompanions().length == 1
+                ? '말을 걸면 첫 룸펫이 지금 방 분위기에 맞춰 대답해요.'
+                : '말을 걸면 입주한 룸펫들이 지금 방 분위기에 맞춰 대답해요.',
+            style: const TextStyle(color: Colors.white54, fontSize: 13),
           ),
           const SizedBox(height: 12),
           SizedBox(
@@ -537,7 +575,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   decoration: InputDecoration(
                     hintText: _isListeningForSpeech
                         ? '듣는 중... 말한 뒤 전송을 눌러 주세요'
-                        : '동거인들에게 말하기...',
+                        : '룸펫에게 말하기...',
                     hintStyle: const TextStyle(color: Colors.white38),
                     filled: true,
                     fillColor: Colors.black.withOpacity(0.32),
@@ -669,7 +707,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   MaterialPageRoute(builder: (_) => const AchievementsScreen()),
                 );
               },
-              child: const Text('기억 / 칭호 보기'),
+              child: const Text('기억 조각 보기'),
             ),
           ),
         ),
@@ -685,34 +723,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   MaterialPageRoute(builder: (_) => const FanMailboxScreen()),
                 );
               },
-              child: Text('동거인 쪽지 (${globalFanMessages.length})'),
+              child: Text('룸펫 쪽지 (${globalFanMessages.length})'),
             ),
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildLegacyLiveButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 48,
-      child: ElevatedButton(
-        style: _secondaryButtonStyle(),
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ThemeSelectScreen(
-                stageName: widget.stageName,
-                fandomName: widget.fandomName,
-                style: widget.style,
-              ),
-            ),
-          );
-        },
-        child: const Text('추억의 라방 모드'),
-      ),
     );
   }
 

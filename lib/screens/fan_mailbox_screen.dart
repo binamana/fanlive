@@ -9,6 +9,7 @@ import '../app/fanlive_globals.dart'
         globalStageName;
 import '../main.dart' show fanButtonStyle;
 import '../models/core_fan_profile.dart';
+import '../services/memory_title_service.dart';
 import '../widgets/fanlive_background.dart';
 import '../widgets/glass_card.dart';
 import 'one_on_one_live_screen.dart';
@@ -25,17 +26,15 @@ class FanMailboxScreen extends StatelessWidget {
 
     if (affection < 20) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('$fanWithParticle 더 친해지면 1:1 라방을 열 수 있어요.'),
-        ),
+        SnackBar(content: Text('$fanWithParticle 더 친해지면 1:1 방 대화를 열 수 있어요.')),
       );
       return;
     }
 
     if (globalStageName == null || globalFandomName == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('캐릭터 정보를 먼저 설정해 주세요.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('캐릭터 정보를 먼저 설정해 주세요.')));
       return;
     }
 
@@ -60,13 +59,13 @@ class FanMailboxScreen extends StatelessWidget {
   String coreFanLabel(String fanName) {
     switch (fanName) {
       case '하루':
-        return '다정한 오래된 팬';
+        return '기다림이 많은 다정한 룸펫';
       case '별밤':
-        return '현실적인 조언 팬';
+        return '툴툴대는 츤데레 룸펫';
       case '민트':
-        return '장난 많은 리액션 팬';
+        return '말썽 많은 장난꾸러기 룸펫';
       default:
-        return '코어 팬';
+        return '룸펫';
     }
   }
 
@@ -76,10 +75,17 @@ class FanMailboxScreen extends StatelessWidget {
     }
 
     if (profile.favoriteThemes.length <= 2) {
-      return profile.favoriteThemes.join(', ');
+      return profile.favoriteThemes
+          .map(MemoryTitleService.displayRecordTheme)
+          .join(', ');
     }
 
-    return '${profile.favoriteThemes.take(2).join(', ')} 외 ${profile.favoriteThemes.length - 2}개';
+    final visibleThemes = profile.favoriteThemes
+        .take(2)
+        .map(MemoryTitleService.displayRecordTheme)
+        .join(', ');
+
+    return '$visibleThemes 외 ${profile.favoriteThemes.length - 2}개';
   }
 
   @override
@@ -92,19 +98,16 @@ class FanMailboxScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                '💌 팬 우편함',
+                '💌 룸펫 쪽지',
                 style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               Text(
-                '도착한 팬 메시지 ${globalFanMessages.length}개',
+                '남겨진 생각 기록 ${globalFanMessages.length}개',
                 style: const TextStyle(color: Colors.white70),
               ),
               const SizedBox(height: 16),
-              const Text(
-                '팬 관계',
-                style: TextStyle(color: Colors.white54),
-              ),
+              const Text('룸펫 관계', style: TextStyle(color: Colors.white54)),
               const SizedBox(height: 10),
               SizedBox(
                 height: 330,
@@ -113,6 +116,29 @@ class FanMailboxScreen extends StatelessWidget {
                   separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final profile = globalCoreFanProfiles[index];
+
+                    if (!profile.isAdopted) {
+                      return const GlassCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '빈 룸펫 자리',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              '나중에 새 룸펫을 입양할 수 있어요.',
+                              style: TextStyle(color: Colors.white60),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
                     final affection =
                         fanAffection[profile.name] ?? profile.affection;
                     final remainingAffection = 20 - affection;
@@ -134,25 +160,25 @@ class FanMailboxScreen extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                coreFanLabel(profile.name),
+                                profile.companionType,
                                 style: const TextStyle(color: Colors.white60),
                               ),
                             ],
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            '호감도 $affection · 기분 ${profile.mood} · 서운함 ${profile.neglect}',
+                            '친밀도 $affection · 기분 ${profile.mood} · 서운함 ${profile.neglect}',
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            '좋아하는 라방: ${favoriteThemeSummary(profile)}',
+                            '좋아하는 기억: ${favoriteThemeSummary(profile)}',
                             style: const TextStyle(color: Colors.white60),
                           ),
                           const SizedBox(height: 8),
                           Text(
                             isUnlocked
-                                ? '1:1 라방 가능'
-                                : '1:1 라방까지 $remainingAffection 호감도 남음',
+                                ? '1:1 방 대화 가능'
+                                : '1:1 방 대화까지 $remainingAffection 친밀도 남음',
                             style: TextStyle(
                               color: isUnlocked
                                   ? const Color(0xFFFF8FD2)
@@ -174,16 +200,12 @@ class FanMailboxScreen extends StatelessWidget {
                                 ),
                               ),
                               onPressed: () {
-                                startOneOnOneLive(
-                                  context,
-                                  profile,
-                                  affection,
-                                );
+                                startOneOnOneLive(context, profile, affection);
                               },
                               child: Text(
                                 isUnlocked
-                                    ? '${fanNameWithParticle(profile.name)} 1:1 라방 열기'
-                                    : '${fanNameWithParticle(profile.name)} 1:1 라방',
+                                    ? '${fanNameWithParticle(profile.name)} 1:1 방 대화 열기'
+                                    : '${fanNameWithParticle(profile.name)} 1:1 방 대화',
                               ),
                             ),
                           ),
@@ -203,7 +225,9 @@ class FanMailboxScreen extends StatelessWidget {
                       padding: const EdgeInsets.only(bottom: 12),
                       child: GlassCard(
                         child: Text(
-                          globalFanMessages[index],
+                          MemoryTitleService.displaySummary(
+                            globalFanMessages[index],
+                          ),
                           style: const TextStyle(fontSize: 16),
                         ),
                       ),

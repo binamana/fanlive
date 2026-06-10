@@ -30,13 +30,13 @@ class MainMenuScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               const Text(
-                '세 명의 사이버 동거인과 사는 AI 룸 라이프',
+                '세 룸펫과 함께 지내는 픽셀 룸',
                 style: TextStyle(color: Colors.white70, fontSize: 16),
               ),
               const SizedBox(height: 28),
               const GlassCard(
                 child: Text(
-                  '새로 시작하면 내 방과 동거인 관계를 준비해요.\n이어하기는 저장된 사이버 방을 불러옵니다.',
+                  '새로 시작하면 작은 방과 첫 룸펫을 준비해요.\n이어하기는 저장된 픽셀 룸을 불러옵니다.',
                   style: TextStyle(color: Colors.white70, height: 1.4),
                 ),
               ),

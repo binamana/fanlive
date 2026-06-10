@@ -16,15 +16,15 @@ String? globalStyle;
 List<String> globalFanMessages = [];
 
 Map<String, String> fanProfiles = {
-  '하루': '의존적이고 착한 사이버 동거인',
-  '별밤': '시니컬한 츤데레 동거인',
-  '민트': '말썽쟁이 장난꾸러기 동거인',
+  '하루': '기다림이 많은 다정한 룸펫',
+  '별밤': '툴툴대는 츤데레 룸펫',
+  '민트': '말썽 많은 장난꾸러기 룸펫',
 };
 
 Map<String, int> fanAffection = createDefaultFanAffection();
 
 List<CoreFanProfile> globalCoreFanProfiles =
-    CoreFanService.createDefaultProfiles()..forEach((profile) {
+    CoreFanService.createStarterProfiles()..forEach((profile) {
       profile.affection = fanAffection[profile.name] ?? profile.affection;
     });
 
@@ -40,7 +40,7 @@ void resetCurrentRunGlobals({bool clearCharacter = true}) {
   fanAffection
     ..clear()
     ..addAll(createDefaultFanAffection());
-  globalCoreFanProfiles = CoreFanService.createDefaultProfiles();
+  globalCoreFanProfiles = CoreFanService.createStarterProfiles();
   CoreFanService.syncToLegacyFanAffection(globalCoreFanProfiles, fanAffection);
 
   if (clearCharacter) {

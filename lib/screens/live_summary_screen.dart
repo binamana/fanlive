@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app/fanlive_globals.dart'
     show globalFandomName, globalStageName, globalStyle;
 import '../main.dart' show fanButtonStyle;
+import '../services/memory_title_service.dart';
 import '../widgets/fanlive_background.dart';
 import '../widgets/glass_card.dart';
 import 'home_screen.dart';
@@ -28,6 +29,10 @@ class LiveSummaryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final displayTheme = MemoryTitleService.displayRecordTheme(themeTitle);
+    final displaySummary = MemoryTitleService.displaySummary(summary);
+    final displayTitle = MemoryTitleService.displayTitle(earnedTitle);
+
     return FanLiveBackground(
       child: SafeArea(
         child: Padding(
@@ -36,7 +41,7 @@ class LiveSummaryScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                '오늘의 라방 종료',
+                '오늘의 방 기록',
                 style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 28),
@@ -45,13 +50,13 @@ class LiveSummaryScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '테마: $themeTitle',
+                      '기억 배경: $displayTheme',
                       style: const TextStyle(fontSize: 20),
                     ),
                     const SizedBox(height: 18),
-                    Text('최고 시청자: $viewers명'),
-                    Text('총 하트: $hearts개'),
-                    Text('신규 팬: +${viewers ~/ 8}명'),
+                    Text('방 반응: $viewers'),
+                    Text('감정 에너지: $hearts'),
+                    Text('관계 변화: +${viewers ~/ 8}'),
 
                     const SizedBox(height: 18),
                     const Text(
@@ -69,15 +74,15 @@ class LiveSummaryScreen extends StatelessWidget {
 
                     const SizedBox(height: 18),
                     const Text(
-                      '방송 요약',
+                      '생활 요약',
                       style: TextStyle(color: Colors.white54),
                     ),
                     const SizedBox(height: 6),
-                    Text(summary),
+                    Text(displaySummary),
 
                     const SizedBox(height: 18),
                     Text(
-                      '🏆 획득 칭호: $earnedTitle',
+                      '기억 칭호: $displayTitle',
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 18,
@@ -112,7 +117,7 @@ class LiveSummaryScreen extends StatelessWidget {
                       ),
                     );
                   },
-                  child: const Text('방송 기록 보기'),
+                  child: const Text('생활 기록 보기'),
                 ),
               ),
               const SizedBox(height: 12),

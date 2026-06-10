@@ -50,7 +50,7 @@ class LiveRoomScreen extends StatefulWidget {
 }
 
 class _LiveRoomScreenState extends State<LiveRoomScreen> {
-  static const _typingComment = '팬들이 입력 중...';
+  static const _typingComment = '생각중';
 
   int viewers = 124;
   int hearts = 0;

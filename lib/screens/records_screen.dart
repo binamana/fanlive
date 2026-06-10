@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../main.dart' show fanButtonStyle;
+import '../services/memory_title_service.dart';
 import '../widgets/fanlive_background.dart';
 import '../widgets/glass_card.dart';
 
@@ -23,6 +24,8 @@ class RecordsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
+    final displayTheme = MemoryTitleService.displayRecordTheme(themeTitle);
+    final displaySummary = MemoryTitleService.displaySummary(summary);
 
     return FanLiveBackground(
       child: SafeArea(
@@ -32,12 +35,12 @@ class RecordsScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                '방송 기록',
+                '하루 기록',
                 style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               const Text(
-                '내 캐릭터의 활동 기록이 쌓여요.',
+                '픽셀 룸에서 남은 생활 기억이 쌓여요.',
                 style: TextStyle(color: Colors.white70),
               ),
               const SizedBox(height: 28),
@@ -51,16 +54,16 @@ class RecordsScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      themeTitle,
+                      displayTheme,
                       style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: 14),
-                    Text('최고 시청자: $viewers명'),
-                    Text('총 하트: $hearts개'),
-                    Text('신규 팬: +${viewers ~/ 8}명'),
+                    Text('방 반응: $viewers'),
+                    Text('감정 에너지: $hearts'),
+                    Text('관계 변화: +${viewers ~/ 8}'),
                     const SizedBox(height: 16),
                     const Text(
                       '오늘의 순간',
@@ -70,11 +73,11 @@ class RecordsScreen extends StatelessWidget {
                     Text('“$bestMoment”'),
                     const SizedBox(height: 16),
                     const Text(
-                      '요약',
+                      '생활 요약',
                       style: TextStyle(color: Colors.white54),
                     ),
                     const SizedBox(height: 6),
-                    Text(summary),
+                    Text(displaySummary),
                   ],
                 ),
               ),
